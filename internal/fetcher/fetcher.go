@@ -20,6 +20,8 @@ func Fetch(source parser.Source) (*IPPrefixes, error) {
 	switch source.Type {
 	case parser.ClashList:
 		return fetchClashList(source.Value)
+	case parser.SourceCIDR:
+		return fetchSourceCIDR(source.Value)
 	default:
 		log.Printf("warning: unsupported source type %q; skipping", source.Type)
 		return &IPPrefixes{}, nil
@@ -97,6 +99,61 @@ func fetchClashList(url string) (*IPPrefixes, error) {
 				}
 				ipPrefixes.IPv6 = append(ipPrefixes.IPv6, masked)
 			}
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("scan source %q after line %d: %w", url, lineNo, err)
+	}
+
+	return &ipPrefixes, nil
+}
+
+func fetchSourceCIDR(url string) (*IPPrefixes, error) {
+	var ipPrefixes IPPrefixes
+
+	resp, err := httpClient.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("request source %q: unexpected HTTP status %s", url, resp.Status)
+	}
+
+	scanner := bufio.NewScanner(resp.Body)
+	lineNo := 0
+	for scanner.Scan() {
+		lineNo++
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+
+		prefix, err := netip.ParsePrefix(line)
+		if err != nil {
+			log.Printf("%s:%d: warning: invalid CIDR %q; skipping: %v", url, lineNo, line, err)
+			continue
+		}
+
+		masked := prefix.Masked()
+		if masked != prefix {
+			log.Printf(
+				"%s:%d: non-canonical CIDR %s, expected %s",
+				url,
+				lineNo,
+				prefix,
+				masked,
+			)
+			continue
+		}
+
+		if masked.Addr().Is4() {
+			ipPrefixes.IPv4 = append(ipPrefixes.IPv4, masked)
+		} else if masked.Addr().Is6() {
+			ipPrefixes.IPv6 = append(ipPrefixes.IPv6, masked)
+		} else {
+
 		}
 	}
 	if err := scanner.Err(); err != nil {

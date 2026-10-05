@@ -3,11 +3,12 @@ package parser
 type SourceType string
 
 const (
-	ClashList SourceType = "clash-list"
+	ClashList  SourceType = "clash-list"
+	SourceCIDR SourceType = "cidr"
 )
 
 type Source struct {
-	Type  SourceType `yaml:"type" validate:"required,oneof=clash-list"`
+	Type  SourceType `yaml:"type" validate:"required,oneof=clash-list cidr"`
 	Value string     `yaml:"value" validate:"required"`
 }
 
