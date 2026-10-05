@@ -13,6 +13,7 @@ func main() {
 
 	sourcesDir := flag.String("sources-dir", "./sources", "")
 	output := flag.String("output", "./output", "")
+	site := flag.String("site", "./_site", "")
 	flag.Parse()
 
 	sourceFiles, err := parser.Parse(*sourcesDir)
@@ -22,6 +23,10 @@ func main() {
 
 	err = generator.Build(*output, sourceFiles)
 	if err != nil {
+		panic(err)
+	}
+
+	if err := generator.BuildSite(*output, *site, sourceFiles); err != nil {
 		panic(err)
 	}
 }

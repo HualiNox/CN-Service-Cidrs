@@ -1,6 +1,10 @@
 # cn-service-cidrs
 
-Generate IPv4 and IPv6 CIDR tables from rule lists and plain CIDR sources. Source definitions are stored under `sources/`; generated tables are written to `output/tables/`.
+Generate IPv4 and IPv6 CIDR tables from rule lists and plain CIDR sources. Source definitions are stored under `sources/`; `go run .` writes the tables to `output/tables/` and separately builds the static website in `_site/`. GitHub Pages publishes only `_site/`.
+
+The GitHub Actions workflow rebuilds the site on pushes to `main`, daily, and when manually dispatched. To enable deployment, set **Settings → Pages → Build and deployment → Source** to **GitHub Actions**.
+
+The generated site includes an index with update time and prefix counts, copies of downloadable tables under `_site/tables/`, and machine-readable counts and links in `_site/metadata.json`.
 
 ## Data sources
 

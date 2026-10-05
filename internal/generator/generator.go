@@ -44,7 +44,6 @@ func Build(output string, sourceFiles []parser.SourceFile) error {
 			len(ipPrefixes.IPv4),
 			len(ipPrefixes.IPv6),
 		)
-
 		if err := writeIPCIDRs(
 			ipPrefixes,
 			filepath.Join(tables, sourceFile.Directory),
@@ -61,7 +60,11 @@ func Build(output string, sourceFiles []parser.SourceFile) error {
 		}
 	}
 
-	return writeDirectorySummary(directoryPrefixes, tables)
+	if err := writeDirectorySummary(directoryPrefixes, tables); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func mkdirAll(path string, removeExisting bool) error {
