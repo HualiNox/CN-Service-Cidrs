@@ -1,0 +1,5 @@
+name: NeteaseMusic
+
+sources:
+  - type: clash-list
+    value: https://raw.githubusercontent.com/LM-Firefly/Rules/refs/heads/master/Domestic-Services/NeteaseMusic.list
