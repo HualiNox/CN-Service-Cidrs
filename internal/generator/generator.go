@@ -36,6 +36,13 @@ func Build(output string, sourceFiles []parser.SourceFile) error {
 		ipPrefixes.IPv4 = dedup(ipPrefixes.IPv4)
 		ipPrefixes.IPv6 = dedup(ipPrefixes.IPv6)
 
+		log.Printf(
+			"group %q: IPv4=%d, IPv6=%d",
+			sourceFile.Group.Name,
+			len(ipPrefixes.IPv4),
+			len(ipPrefixes.IPv6),
+		)
+
 		if err := writeIPCIDRs(
 			ipPrefixes,
 			filepath.Join(tables, sourceFile.Directory),
