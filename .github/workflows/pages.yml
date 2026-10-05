@@ -125,6 +125,7 @@ jobs:
       - name: Publish dated release
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
           tag="$(date -u +%F)"
