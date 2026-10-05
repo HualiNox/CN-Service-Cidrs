@@ -7,6 +7,7 @@ import (
 	"net/netip"
 	"os"
 	"path/filepath"
+	"sort"
 
 	"github.com/HualiNox/cn-service-cidrs/internal/fetcher"
 	"github.com/HualiNox/cn-service-cidrs/internal/parser"
@@ -92,6 +93,12 @@ func dedup(prefixes []netip.Prefix) []netip.Prefix {
 	for prefix := range set {
 		result = append(result, prefix)
 	}
+	sort.Slice(result, func(i, j int) bool {
+		if order := result[i].Addr().Compare(result[j].Addr()); order != 0 {
+			return order < 0
+		}
+		return result[i].Bits() < result[j].Bits()
+	})
 	return result
 }
 
