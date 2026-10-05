@@ -4,7 +4,7 @@ import (
 	"flag"
 	"log"
 
-	"github.com/HualiNox/cn-service-cidrs/internal/fetcher"
+	"github.com/HualiNox/cn-service-cidrs/internal/generator"
 	"github.com/HualiNox/cn-service-cidrs/internal/parser"
 )
 
@@ -19,7 +19,7 @@ func main() {
 		panic(err)
 	}
 
-	err = fetcher.Fetch(*output, sourceFiles)
+	err = generator.Build(*output, sourceFiles)
 	if err != nil {
 		panic(err)
 	}
