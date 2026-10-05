@@ -1,6 +1,6 @@
 # cn-service-cidrs
 
-Generate IPv4 and IPv6 CIDR tables from Clash rule lists. Source definitions are stored under `sources/`; generated tables are written to `output/tables/`.
+Generate IPv4 and IPv6 CIDR tables from rule lists and plain CIDR sources. Source definitions are stored under `sources/`; generated tables are written to `output/tables/`.
 
 ## Data sources
 
@@ -32,3 +32,25 @@ Generate IPv4 and IPv6 CIDR tables from Clash rule lists. Source definitions are
 #### [blackmatrix7/ios_rule_script](https://github.com/blackmatrix7/ios_rule_script)
 
 - [ChinaIPs](https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/ChinaIPs/ChinaIPs.list)
+
+### `cidr`
+
+#### APNIC based — [mayaxcn/china-ip-list](https://github.com/mayaxcn/china-ip-list)
+
+- [IPv4 routes](https://raw.githubusercontent.com/mayaxcn/china-ip-list/master/chnroute.txt)
+- [IPv6 routes](https://raw.githubusercontent.com/mayaxcn/china-ip-list/master/chnroute_v6.txt)
+
+#### BGP / operator oriented
+
+- [gaoyifan/china-operator-ip IPv4](https://raw.githubusercontent.com/gaoyifan/china-operator-ip/ip-lists/china.txt) ([repository](https://github.com/gaoyifan/china-operator-ip))
+- [gaoyifan/china-operator-ip IPv6](https://raw.githubusercontent.com/gaoyifan/china-operator-ip/ip-lists/china6.txt) ([repository](https://github.com/gaoyifan/china-operator-ip))
+
+#### IP database oriented
+
+- [clang.cn all_cn_ipv46.txt](https://ispip.clang.cn/all_cn_ipv46.txt) ([source site](https://ispip.clang.cn))
+- [metowolf/iplist China](https://metowolf.github.io/iplist/data/special/china.txt) ([repository](https://github.com/metowolf/iplist))
+
+#### Supplemental
+
+- [17mon/china_ip_list](https://raw.githubusercontent.com/17mon/china_ip_list/master/china_ip_list.txt) ([repository](https://github.com/17mon/china_ip_list))
+- [Loyalsoldier/geoip CN](https://raw.githubusercontent.com/Loyalsoldier/geoip/release/text/cn.txt) ([repository](https://github.com/Loyalsoldier/geoip))

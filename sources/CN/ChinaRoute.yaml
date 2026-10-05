@@ -1,0 +1,30 @@
+name: ChinaRoute
+
+sources:
+  # APNIC based
+  - type: cidr
+    value: https://raw.githubusercontent.com/mayaxcn/china-ip-list/master/chnroute.txt
+
+  - type: cidr
+    value: https://raw.githubusercontent.com/mayaxcn/china-ip-list/master/chnroute_v6.txt
+
+  # BGP / operator oriented
+  - type: cidr
+    value: https://raw.githubusercontent.com/gaoyifan/china-operator-ip/ip-lists/china.txt
+
+  - type: cidr
+    value: https://raw.githubusercontent.com/gaoyifan/china-operator-ip/ip-lists/china6.txt
+
+  # IP database oriented
+  - type: cidr
+    value: https://ispip.clang.cn/all_cn_ipv46.txt
+
+  - type: cidr
+    value: https://metowolf.github.io/iplist/data/special/china.txt
+
+  # supplemental
+  - type: cidr
+    value: https://raw.githubusercontent.com/17mon/china_ip_list/master/china_ip_list.txt
+
+  - type: cidr
+    value: https://raw.githubusercontent.com/Loyalsoldier/geoip/release/text/cn.txt
