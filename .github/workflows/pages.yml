@@ -1,0 +1,137 @@
+name: Build and deploy Pages
+
+on:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: "15 18 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
+    outputs:
+      changed: ${{ steps.diff.outputs.changed }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - name: Build rules and website
+        run: go run .
+
+      - name: Compare generated rules with latest release
+        id: diff
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          content_hash="$(find output/tables -type f -name '*.txt' -print0 | sort -z | xargs -0 sha256sum | sha256sum | cut -d ' ' -f 1)"
+          jq --arg content_hash "$content_hash" '. + {content_hash: $content_hash}' _site/metadata.json > "$RUNNER_TEMP/metadata.json"
+          mv "$RUNNER_TEMP/metadata.json" _site/metadata.json
+
+          latest_tag="$(gh release list --limit 1 --json tagName --jq '.[0].tagName // ""')"
+          previous_hash=""
+          if [ -n "$latest_tag" ]; then
+            mkdir -p "$RUNNER_TEMP/previous-release"
+            if gh release download "$latest_tag" --pattern metadata.json --dir "$RUNNER_TEMP/previous-release" >/dev/null 2>&1; then
+              previous_hash="$(jq -r '.content_hash // ""' "$RUNNER_TEMP/previous-release/metadata.json")"
+            fi
+          fi
+
+          if [ "$content_hash" = "$previous_hash" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Generated CIDR files are unchanged."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "Generated CIDR files changed."
+          fi
+
+      - name: Create rules archive
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          mkdir -p "$RUNNER_TEMP/cn-service-cidrs/rules"
+          cp -R output/tables/. "$RUNNER_TEMP/cn-service-cidrs/rules/"
+          cd "$RUNNER_TEMP/cn-service-cidrs"
+          zip -qr "$RUNNER_TEMP/rules.zip" rules
+          mkdir -p "$RUNNER_TEMP/release-files"
+          cp "$GITHUB_WORKSPACE/_site/metadata.json" "$RUNNER_TEMP/release-files/metadata.json"
+          cp "$RUNNER_TEMP/rules.zip" "$RUNNER_TEMP/release-files/rules.zip"
+
+      - name: Upload release files
+        if: steps.diff.outputs.changed == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-files
+          path: ${{ runner.temp }}/release-files/
+          if-no-files-found: error
+
+      - name: Configure Pages
+        if: steps.diff.outputs.changed == 'true'
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        if: steps.diff.outputs.changed == 'true'
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    if: needs.build.outputs.changed == 'true'
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  release:
+    runs-on: ubuntu-latest
+    needs:
+      - build
+      - deploy
+    if: needs.build.outputs.changed == 'true'
+    permissions:
+      contents: write
+    steps:
+      - name: Download release files
+        uses: actions/download-artifact@v4
+        with:
+          name: release-files
+          path: release-files
+
+      - name: Publish dated release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="$(date -u +%F)"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" release-files/metadata.json release-files/rules.zip --clobber
+          else
+            gh release create "$tag" release-files/metadata.json release-files/rules.zip \
+              --title "CN Service CIDRs $tag" \
+              --notes "Automated CIDR update for $tag (UTC)."
+          fi
