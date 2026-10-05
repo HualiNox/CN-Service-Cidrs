@@ -1,12 +1,16 @@
 # cn-service-cidrs
 
-Generate IPv4 and IPv6 CIDR tables from rule lists and plain CIDR sources. Source definitions are stored under `sources/`; `go run .` writes the tables to `output/tables/` and separately builds the static website in `_site/`. GitHub Pages publishes only `_site/`.
+Ready-to-use IPv4 and IPv6 CIDR lists for China, built from community-maintained rule lists and public routing datasets. Entries are combined, deduplicated, and refreshed daily when the upstream data changes.
 
-Download the aggregated China tables: [all prefixes](https://rules.mewrix.com/tables/CN.txt), [IPv4](https://rules.mewrix.com/tables/CN-ipv4.txt), and [IPv6](https://rules.mewrix.com/tables/CN-ipv6.txt). Browse the [generated tables page](https://rules.mewrix.com/).
+## Downloads
 
-The GitHub Actions workflow rebuilds the site on pushes to `main`, daily, and when manually dispatched. To enable deployment, set **Settings → Pages → Build and deployment → Source** to **GitHub Actions**.
+| List | Download |
+| --- | --- |
+| All China prefixes | [CN.txt](https://rules.mewrix.com/tables/CN.txt) |
+| China IPv4 prefixes | [CN-ipv4.txt](https://rules.mewrix.com/tables/CN-ipv4.txt) |
+| China IPv6 prefixes | [CN-ipv6.txt](https://rules.mewrix.com/tables/CN-ipv6.txt) |
 
-The generated site includes an index with update time and prefix counts, copies of downloadable tables under `_site/tables/`, and machine-readable counts and links in `_site/metadata.json`.
+Browse the [complete collection of generated lists](https://rules.mewrix.com/).
 
 ## Data sources
 
