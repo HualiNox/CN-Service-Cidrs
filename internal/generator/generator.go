@@ -22,6 +22,7 @@ func Build(output string, sourceFiles []parser.SourceFile) error {
 		return fmt.Errorf("create tables directory %q: %w", tables, err)
 	}
 
+	directoryPrefixes := make(map[string]fetcher.IPPrefixes)
 	for _, sourceFile := range sourceFiles {
 		var ipPrefixes fetcher.IPPrefixes
 		for _, source := range sourceFile.Group.Sources {
@@ -50,9 +51,16 @@ func Build(output string, sourceFiles []parser.SourceFile) error {
 		); err != nil {
 			return fmt.Errorf("write group %q: %w", sourceFile.Group.Name, err)
 		}
+
+		for dir := sourceFile.Directory; dir != "."; dir = filepath.Dir(dir) {
+			prefixes := directoryPrefixes[dir]
+			prefixes.IPv4 = dedup(append(prefixes.IPv4, ipPrefixes.IPv4...))
+			prefixes.IPv6 = dedup(append(prefixes.IPv6, ipPrefixes.IPv6...))
+			directoryPrefixes[dir] = prefixes
+		}
 	}
 
-	return nil
+	return writeDirectorySummary(directoryPrefixes, tables)
 }
 
 func mkdirAll(path string, removeExisting bool) error {
@@ -158,6 +166,27 @@ func writeIPCIDRs(ipPrefixes fetcher.IPPrefixes, path, name string) error {
 			if _, err := io.WriteString(allIPFile, line); err != nil {
 				return fmt.Errorf("write output file %q: %w", filepath.Join(path, allIPName), err)
 			}
+		}
+	}
+
+	return nil
+}
+
+func writeDirectorySummary(directoryPrefixes map[string]fetcher.IPPrefixes, path string) error {
+	for dir, ipPrefixes := range directoryPrefixes {
+		if len(ipPrefixes.IPv4) == 0 && len(ipPrefixes.IPv6) == 0 {
+			continue
+		}
+
+		targetDir := filepath.Join(path, filepath.Dir(dir))
+		log.Printf(
+			"directory %q: IPv4=%d, IPv6=%d",
+			dir,
+			len(ipPrefixes.IPv4),
+			len(ipPrefixes.IPv6),
+		)
+		if err := writeIPCIDRs(ipPrefixes, targetDir, filepath.Base(dir)); err != nil {
+			return fmt.Errorf("write directory summary %q: %w", dir, err)
 		}
 	}
 

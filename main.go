@@ -13,6 +13,7 @@ func main() {
 
 	sourcesDir := flag.String("sources-dir", "./sources", "")
 	output := flag.String("output", "./output", "")
+	flag.Parse()
 
 	sourceFiles, err := parser.Parse(*sourcesDir)
 	if err != nil {
