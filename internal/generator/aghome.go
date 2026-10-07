@@ -11,6 +11,11 @@ import (
 
 const defaultAGHomeUpstreamDNS = "https://dns.alidns.com/dns-query https://doh.pub/dns-query"
 
+const (
+	agHomeMaxDomainsPerRule = 100
+	agHomeMaxRuleBytes      = 4096
+)
+
 func writeAGHomeUpstream(rules []string, path, upstream string) error {
 	upstream = strings.TrimSpace(upstream)
 	if upstream == "" {
@@ -42,11 +47,48 @@ func writeAGHomeUpstream(rules []string, path, upstream string) error {
 	}
 	defer func() { _ = file.Close() }()
 
-	for _, domain := range domains {
-		if _, err := io.WriteString(file, "[/"+domain+"/]"+upstream+"\n"); err != nil {
+	baseLength := len("[/") + len("/]") + len(upstream)
+	if baseLength >= agHomeMaxRuleBytes {
+		return fmt.Errorf("AGH upstream DNS config is too long (%d bytes)", len(upstream))
+	}
+
+	group := make([]string, 0, agHomeMaxDomainsPerRule)
+	groupLength := baseLength
+	groupCount := 0
+	writeGroup := func() error {
+		if len(group) == 0 {
+			return nil
+		}
+		line := "[/" + strings.Join(group, "/") + "/]" + upstream + "\n"
+		if _, err := io.WriteString(file, line); err != nil {
 			return fmt.Errorf("write AGH upstream file %q: %w", path, err)
 		}
+		groupCount++
+		group = group[:0]
+		groupLength = baseLength
+		return nil
 	}
-	log.Printf("AGH upstream: wrote %d domain suffixes using %q to %q", len(domains), upstream, path)
+
+	for _, domain := range domains {
+		addedLength := len(domain)
+		if len(group) > 0 {
+			addedLength++ // separator slash
+		}
+		if len(group) >= agHomeMaxDomainsPerRule || groupLength+addedLength > agHomeMaxRuleBytes {
+			if err := writeGroup(); err != nil {
+				return err
+			}
+			addedLength = len(domain)
+		}
+		if groupLength+addedLength > agHomeMaxRuleBytes {
+			return fmt.Errorf("domain %q is too long for an AGH upstream rule", domain)
+		}
+		group = append(group, domain)
+		groupLength += addedLength
+	}
+	if err := writeGroup(); err != nil {
+		return err
+	}
+	log.Printf("AGH upstream: wrote %d domain suffixes in %d rules using %q to %q", len(domains), groupCount, upstream, path)
 	return nil
 }
