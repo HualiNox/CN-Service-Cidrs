@@ -2,6 +2,8 @@
 
 Ready-to-use IPv4 and IPv6 CIDR lists for China, built from community-maintained rule lists and public routing datasets. Entries are combined, deduplicated, and refreshed daily when the upstream data changes.
 
+Non-canonical CIDRs are rejected rather than automatically masked, to avoid silently expanding malformed upstream prefixes.
+
 ## Downloads
 
 | List | Download |
