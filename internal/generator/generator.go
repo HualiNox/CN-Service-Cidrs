@@ -25,6 +25,8 @@ func Build(output string, sourceFiles []parser.SourceFile) ([]SourceStatus, erro
 
 	directoryPrefixes := make(map[string]fetcher.IPPrefixes)
 	sources := make([]SourceStatus, 0)
+	sourceIPv4 := make([][]netip.Prefix, 0)
+	sourceIPv6 := make([][]netip.Prefix, 0)
 	for _, sourceFile := range sourceFiles {
 		var ipPrefixes fetcher.IPPrefixes
 		for _, source := range sourceFile.Group.Sources {
@@ -37,18 +39,22 @@ func Build(output string, sourceFiles []parser.SourceFile) ([]SourceStatus, erro
 			if sourceFile.Directory != "." {
 				group = filepath.ToSlash(filepath.Join(sourceFile.Directory, group))
 			}
+			ipv4 := minimize(result.IPPrefixes.IPv4)
+			ipv6 := minimize(result.IPPrefixes.IPv6)
 			sources = append(sources, SourceStatus{
 				Group:             group,
 				Type:              source.Type,
 				URL:               source.Value,
 				SHA256:            result.SHA256,
-				IPv4Count:         len(minimize(result.IPPrefixes.IPv4)),
-				IPv6Count:         len(minimize(result.IPPrefixes.IPv6)),
+				IPv4Count:         len(ipv4),
+				IPv6Count:         len(ipv6),
 				RejectedCIDRCount: result.RejectedCIDRCount,
 			})
+			sourceIPv4 = append(sourceIPv4, ipv4)
+			sourceIPv6 = append(sourceIPv6, ipv6)
 
-			ipPrefixes.IPv4 = append(ipPrefixes.IPv4, result.IPPrefixes.IPv4...)
-			ipPrefixes.IPv6 = append(ipPrefixes.IPv6, result.IPPrefixes.IPv6...)
+			ipPrefixes.IPv4 = append(ipPrefixes.IPv4, ipv4...)
+			ipPrefixes.IPv6 = append(ipPrefixes.IPv6, ipv6...)
 		}
 
 		ipPrefixes.IPv4 = minimize(ipPrefixes.IPv4)
@@ -78,6 +84,13 @@ func Build(output string, sourceFiles []parser.SourceFile) ([]SourceStatus, erro
 
 	if err := writeDirectorySummary(directoryPrefixes, tables); err != nil {
 		return nil, err
+	}
+
+	v4Exclusive := exclusiveAddressCounts(sourceIPv4, 32)
+	v6Exclusive := exclusiveAddressCounts(sourceIPv6, 128)
+	for i := range sources {
+		sources[i].ExclusiveIPv4AddressCount = v4Exclusive[i]
+		sources[i].ExclusiveIPv6AddressCount = v6Exclusive[i]
 	}
 
 	return sources, nil

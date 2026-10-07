@@ -46,27 +46,27 @@ jobs:
 
           latest_tag="$(gh release list --limit 1 --json tagName --jq '.[0].tagName // ""')"
           previous_hash=""
-          previous_rejected_counts="[]"
+          previous_source_metrics="[]"
           if [ -n "$latest_tag" ]; then
             mkdir -p "$RUNNER_TEMP/previous-release"
             if gh release download "$latest_tag" --pattern metadata.json --dir "$RUNNER_TEMP/previous-release" >/dev/null 2>&1; then
               previous_hash="$(jq -r '.content_hash // ""' "$RUNNER_TEMP/previous-release/metadata.json")"
               previous_metadata="$RUNNER_TEMP/previous-release/metadata.json"
-              if jq -e '[.sources[] | has("rejected_cidr_count")] | all' "$previous_metadata" >/dev/null; then
-                previous_rejected_counts="$(jq -c '[.sources[] | {group, url, rejected_cidr_count: (.rejected_cidr_count // 0)}] | sort_by(.group, .url)' "$previous_metadata")"
+              if jq -e '[.sources[] | has("rejected_cidr_count") and has("exclusive_ipv4_address_count") and has("exclusive_ipv6_address_count")] | all' "$previous_metadata" >/dev/null; then
+                previous_source_metrics="$(jq -c '[.sources[] | {group, url, rejected_cidr_count: (.rejected_cidr_count // 0), exclusive_ipv4_address_count: (.exclusive_ipv4_address_count // "0"), exclusive_ipv6_address_count: (.exclusive_ipv6_address_count // "0")}] | sort_by(.group, .url)' "$previous_metadata")"
               else
-                previous_rejected_counts="legacy"
+                previous_source_metrics="legacy"
               fi
             fi
           fi
 
-          current_rejected_counts="$(jq -c '[.sources[] | {group, url, rejected_cidr_count: (.rejected_cidr_count // 0)}] | sort_by(.group, .url)' _site/metadata.json)"
+          current_source_metrics="$(jq -c '[.sources[] | {group, url, rejected_cidr_count: (.rejected_cidr_count // 0), exclusive_ipv4_address_count: (.exclusive_ipv4_address_count // "0"), exclusive_ipv6_address_count: (.exclusive_ipv6_address_count // "0")}] | sort_by(.group, .url)' _site/metadata.json)"
 
           python3 scripts/release_notes.py \
             "$RUNNER_TEMP/previous-release/metadata.json" \
             _site/metadata.json > "$RUNNER_TEMP/release-notes.md"
 
-          if [ "$content_hash" = "$previous_hash" ] && [ "$current_rejected_counts" = "$previous_rejected_counts" ]; then
+          if [ "$content_hash" = "$previous_hash" ] && [ "$current_source_metrics" = "$previous_source_metrics" ]; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
             echo "Generated CIDR files are unchanged."
           else

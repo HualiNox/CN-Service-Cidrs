@@ -13,8 +13,10 @@ def load_metadata(path):
 
 
 def prefix_delta(previous, current):
+    current = int(current or 0)
     if previous is None:
         return "—", f"{current:,}", "—"
+    previous = int(previous or 0)
     delta = current - previous
     sign = "+" if delta > 0 else ""
     return f"{previous:,}", f"{current:,}", f"{sign}{delta:,}"
@@ -54,6 +56,8 @@ def source_rows(previous_sources, current_sources):
                 "ipv4_count",
                 "ipv6_count",
                 "rejected_cidr_count",
+                "exclusive_ipv4_address_count",
+                "exclusive_ipv6_address_count",
             )
         ):
             status = "Changed"
@@ -69,6 +73,12 @@ def source_rows(previous_sources, current_sources):
         v4_before, v4_after, v4_delta = prefix_delta(old_v4, new_v4)
         v6_before, v6_after, v6_delta = prefix_delta(old_v6, new_v6)
         rejected_before, rejected_after, rejected_delta = prefix_delta(old_rejected, new_rejected)
+        old_exclusive_v4 = old.get("exclusive_ipv4_address_count") if old else None
+        new_exclusive_v4 = new.get("exclusive_ipv4_address_count", "0") if new else "0"
+        old_exclusive_v6 = old.get("exclusive_ipv6_address_count") if old else None
+        new_exclusive_v6 = new.get("exclusive_ipv6_address_count", "0") if new else "0"
+        exclusive_v4_before, exclusive_v4_after, exclusive_v4_delta = prefix_delta(old_exclusive_v4, new_exclusive_v4)
+        exclusive_v6_before, exclusive_v6_after, exclusive_v6_delta = prefix_delta(old_exclusive_v6, new_exclusive_v6)
 
         old_hash = (old or {}).get("sha256", "")
         new_hash = (new or {}).get("sha256", "")
@@ -80,6 +90,8 @@ def source_rows(previous_sources, current_sources):
         rows.append(
             "| {source} | {status} | {v4_before} → {v4_after} ({v4_delta}) "
             "| {v6_before} → {v6_after} ({v6_delta}) "
+            "| {exclusive_v4_before} → {exclusive_v4_after} ({exclusive_v4_delta}) "
+            "| {exclusive_v6_before} → {exclusive_v6_after} ({exclusive_v6_delta}) "
             "| {rejected_before} → {rejected_after} ({rejected_delta}) | {hash_change} |".format(
                 source=source_label(source),
                 status=status,
@@ -92,6 +104,12 @@ def source_rows(previous_sources, current_sources):
                 rejected_before=rejected_before,
                 rejected_after=rejected_after,
                 rejected_delta=rejected_delta,
+                exclusive_v4_before=exclusive_v4_before,
+                exclusive_v4_after=exclusive_v4_after,
+                exclusive_v4_delta=exclusive_v4_delta,
+                exclusive_v6_before=exclusive_v6_before,
+                exclusive_v6_after=exclusive_v6_after,
+                exclusive_v6_delta=exclusive_v6_delta,
                 hash_change=hash_change,
             )
         )
@@ -122,11 +140,13 @@ def main():
     print("\n### Source changes\n")
     if old_sources is None:
         print("No per-source records are available in the previous release; current source status is the baseline.\n")
-        print("| Source | Type | IPv4 | IPv6 | Rejected CIDRs | SHA-256 |\n| --- | --- | ---: | ---: | ---: | --- |")
+        print("| Source | Type | IPv4 | IPv6 | Exclusive IPv4 addresses | Exclusive IPv6 addresses | Rejected CIDRs | SHA-256 |\n| --- | --- | ---: | ---: | ---: | ---: | ---: | --- |")
         for source in new_sources:
             print(
                 f"| {source_label(source)} | {source.get('type', '')} | "
                 f"{source.get('ipv4_count', 0):,} | {source.get('ipv6_count', 0):,} | "
+                f"{int(source.get('exclusive_ipv4_address_count', 0)):,} | "
+                f"{int(source.get('exclusive_ipv6_address_count', 0)):,} | "
                 f"{source.get('rejected_cidr_count', 0):,} | "
                 f"{source.get('sha256', '')[:12]} |"
             )
@@ -136,7 +156,7 @@ def main():
     if not rows:
         print("No configured source records changed.\n")
         return
-    print("| Source | Status | IPv4 prefixes | IPv6 prefixes | Rejected CIDRs | SHA-256 |\n| --- | --- | ---: | ---: | ---: | --- |")
+    print("| Source | Status | IPv4 prefixes | IPv6 prefixes | Exclusive IPv4 addresses | Exclusive IPv6 addresses | Rejected CIDRs | SHA-256 |\n| --- | --- | ---: | ---: | ---: | ---: | ---: | --- |")
     print("\n".join(rows))
 
 
