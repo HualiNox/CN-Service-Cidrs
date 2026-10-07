@@ -5,6 +5,7 @@ go 1.27.1
 require (
 	github.com/go-playground/validator/v10 v10.30.5
 	go.yaml.in/yaml/v3 v3.0.5
+	golang.org/x/net v0.58.0
 )
 
 require (

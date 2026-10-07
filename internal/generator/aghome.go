@@ -7,6 +7,8 @@ import (
 	"os"
 	"sort"
 	"strings"
+
+	"golang.org/x/net/idna"
 )
 
 const defaultAGHomeUpstreamDNS = "https://dns.alidns.com/dns-query https://doh.pub/dns-query"
@@ -31,13 +33,26 @@ func writeAGHomeUpstream(rules []string, path, upstream string) error {
 		upstream = strings.Join(upstreams, " ")
 	}
 
-	rules = minimizeDomainRules(rules)
-	domains := make([]string, 0, len(rules))
+	var normalizedRules []string
 	for _, rule := range rules {
 		kind, value, ok := strings.Cut(rule, ":")
 		if ok && kind == "domain" {
-			domains = append(domains, value)
+			ascii, err := idna.Lookup.ToASCII(value)
+			if err != nil {
+				return fmt.Errorf("convert domain %q to IDNA ASCII: %w", value, err)
+			}
+			ascii = strings.TrimSuffix(strings.ToLower(ascii), ".")
+			if ascii == "" {
+				return fmt.Errorf("convert domain %q to IDNA ASCII: empty result", value)
+			}
+			normalizedRules = append(normalizedRules, "domain:"+ascii)
 		}
+	}
+	normalizedRules = minimizeDomainRules(normalizedRules)
+	domains := make([]string, 0, len(normalizedRules))
+	for _, rule := range normalizedRules {
+		_, value, _ := strings.Cut(rule, ":")
+		domains = append(domains, value)
 	}
 	sort.Strings(domains)
 

@@ -23,3 +23,39 @@ jobs:
 
       - name: Run tests
         run: go test ./...
+
+      - name: Build rules
+        run: go run .
+
+      - name: Validate AdGuard Home upstream rules
+        shell: bash
+        run: |
+          set -euo pipefail
+          file="output/tables/aghome-upstream.txt"
+
+          if [[ ! -s "$file" ]]; then
+            echo "AdGuard Home upstream rules file is missing or empty."
+            exit 1
+          fi
+
+          if LC_ALL=C grep -Pn '[^\x00-\x7F]' "$file"; then
+            echo "AdGuard Home upstream rules contain non-ASCII characters."
+            exit 1
+          fi
+
+          if grep -nF '[//]' "$file"; then
+            echo "AdGuard Home upstream rules contain an empty domain group."
+            exit 1
+          fi
+
+          if grep -Pv '^\[/[^]]+/\].+$' "$file"; then
+            echo "AdGuard Home upstream rules contain a malformed line."
+            exit 1
+          fi
+
+          while IFS= read -r line; do
+            if [[ "$line" != *"]${AGHOME_UPSTREAM_DNS}" ]]; then
+              echo "AdGuard Home upstream rule does not end with the configured upstreams: $line"
+              exit 1
+            fi
+          done < "$file"
