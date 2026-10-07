@@ -11,7 +11,19 @@ import (
 )
 
 func writeDomainRules(rules []string, path, name string) error {
+	parsedCount := len(rules)
 	rules = minimizeDomainRules(rules)
+	counts := countDomainRuleTypes(rules)
+	log.Printf(
+		"domain output %q: parsed=%d, after dedup/merge=%d (domain=%d, full=%d, regexp=%d, keyword=%d)",
+		filepath.Join(path, name),
+		parsedCount,
+		len(rules),
+		counts["domain"],
+		counts["full"],
+		counts["regexp"],
+		counts["keyword"],
+	)
 	if len(rules) == 0 {
 		log.Printf("no domain rules found for %q; skipping output", filepath.Join(path, name))
 		return nil
@@ -31,6 +43,24 @@ func writeDomainRules(rules []string, path, name string) error {
 		}
 	}
 	return nil
+}
+
+func countDomainRuleTypes(rules []string) map[string]int {
+	counts := map[string]int{
+		"domain":  0,
+		"full":    0,
+		"regexp":  0,
+		"keyword": 0,
+	}
+	for _, rule := range rules {
+		kind, _, ok := strings.Cut(rule, ":")
+		if ok {
+			if _, supported := counts[kind]; supported {
+				counts[kind]++
+			}
+		}
+	}
+	return counts
 }
 
 func minimizeDomainRules(rules []string) []string {

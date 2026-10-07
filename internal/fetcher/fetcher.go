@@ -55,6 +55,18 @@ func Fetch(source parser.Source) (*Result, error) {
 	if err != nil {
 		return nil, err
 	}
+	if source.Type == parser.DomainList {
+		counts := countDomainRuleTypes(domainRules)
+		log.Printf(
+			"domain source %q: parsed %d rules (domain=%d, full=%d, regexp=%d, keyword=%d)",
+			source.Value,
+			len(domainRules),
+			counts["domain"],
+			counts["full"],
+			counts["regexp"],
+			counts["keyword"],
+		)
+	}
 
 	hash := sha256.Sum256(content)
 	return &Result{
@@ -63,6 +75,24 @@ func Fetch(source parser.Source) (*Result, error) {
 		RejectedCIDRCount: rejectedCIDRCount,
 		SHA256:            hex.EncodeToString(hash[:]),
 	}, nil
+}
+
+func countDomainRuleTypes(rules []string) map[string]int {
+	counts := map[string]int{
+		"domain":  0,
+		"full":    0,
+		"regexp":  0,
+		"keyword": 0,
+	}
+	for _, rule := range rules {
+		kind, _, ok := strings.Cut(rule, ":")
+		if ok {
+			if _, supported := counts[kind]; supported {
+				counts[kind]++
+			}
+		}
+	}
+	return counts
 }
 
 func fetchSource(url string) ([]byte, error) {
