@@ -41,3 +41,10 @@ sources:
 
   - type: cidr
     value: https://raw.githubusercontent.com/Loyalsoldier/geoip/release/text/cn.txt
+
+  # IPdeny aggregated country zones
+  - type: cidr
+    value: https://www.ipdeny.com/ipblocks/data/aggregated/cn-aggregated.zone
+
+  - type: cidr
+    value: https://www.ipdeny.com/ipv6/ipaddresses/aggregated/cn-aggregated.zone

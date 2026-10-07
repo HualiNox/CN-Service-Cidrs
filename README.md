@@ -83,3 +83,5 @@ Country CSV sources contain `ip_range_start`, `ip_range_end`, and `country_code`
 
 - [17mon/china_ip_list](https://raw.githubusercontent.com/17mon/china_ip_list/master/china_ip_list.txt) ([repository](https://github.com/17mon/china_ip_list))
 - [Loyalsoldier/geoip CN](https://raw.githubusercontent.com/Loyalsoldier/geoip/release/text/cn.txt) ([repository](https://github.com/Loyalsoldier/geoip))
+- [IPdeny China IPv4 aggregated zone](https://www.ipdeny.com/ipblocks/data/aggregated/cn-aggregated.zone)
+- [IPdeny China IPv6 aggregated zone](https://www.ipdeny.com/ipv6/ipaddresses/aggregated/cn-aggregated.zone)
