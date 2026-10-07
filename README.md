@@ -14,6 +14,8 @@ Non-canonical CIDRs are rejected rather than automatically masked, to avoid sile
 
 Browse the [complete collection of generated lists](https://rules.mewrix.com/).
 
+`CN.txt` is the address-set union of every configured source group. Duplicate and overlapping ranges are removed, and adjacent CIDRs are combined whenever they exactly cover a parent prefix. The resulting list preserves the covered addresses but not the source or service category for each address. Use the individual source-group lists when that distinction matters.
+
 ## Data sources
 
 ### `clash-list`
