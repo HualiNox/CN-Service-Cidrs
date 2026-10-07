@@ -20,6 +20,10 @@ The generated `metadata.json` records each configured source's group, type, URL,
 
 Release notes compare aggregate prefix counts and report source additions, removals, and content or count changes.
 
+## Licensing
+
+Code and generated data have separate licensing terms. A license covering the code does not automatically cover the generated CIDR lists, which are derived from multiple upstream datasets. See [SOURCES.md](SOURCES.md) and the source list below for information about the data sources.
+
 ## Data sources
 
 ### `clash-list`
