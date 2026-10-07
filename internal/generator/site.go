@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"html/template"
 	"io/fs"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
@@ -140,6 +141,10 @@ const indexTemplate = `<!doctype html>
 			font-size: .85rem;
 			overflow-wrap: anywhere;
 		}
+
+		.source-url a {
+			white-space: nowrap;
+		}
 	</style>
 </head>
 <body>
@@ -211,7 +216,7 @@ const indexTemplate = `<!doctype html>
 			<tr>
 				<td>{{.Group}}</td>
 				<td>{{.Type}}</td>
-				<td class="source-url"><a href="{{.URL}}">{{.URL}}</a></td>
+				<td class="source-url"><a href="{{.URL}}" title="{{.URL}}" aria-label="Open source: {{.URL}}">{{sourceHost .URL}}</a></td>
 				<td>{{.IPv4Count}}</td>
 				<td>{{.IPv6Count}}</td>
 				<td>{{.RejectedCIDRCount}}</td>
@@ -463,7 +468,15 @@ func tableURL(path string) string {
 }
 
 func writeSiteFiles(site string, page pageData) error {
-	tmpl, err := template.New("index").Parse(indexTemplate)
+	tmpl, err := template.New("index").Funcs(template.FuncMap{
+		"sourceHost": func(raw string) string {
+			parsed, err := url.Parse(raw)
+			if err == nil && parsed.Host != "" {
+				return parsed.Host
+			}
+			return raw
+		},
+	}).Parse(indexTemplate)
 	if err != nil {
 		return fmt.Errorf("parse index template: %w", err)
 	}
