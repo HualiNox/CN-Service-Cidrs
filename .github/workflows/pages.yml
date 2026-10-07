@@ -53,6 +53,10 @@ jobs:
             fi
           fi
 
+          python3 scripts/release_notes.py \
+            "$RUNNER_TEMP/previous-release/metadata.json" \
+            _site/metadata.json > "$RUNNER_TEMP/release-notes.md"
+
           if [ "$content_hash" = "$previous_hash" ]; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
             echo "Generated CIDR files are unchanged."
@@ -71,6 +75,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/release-files"
           cp "$GITHUB_WORKSPACE/_site/metadata.json" "$RUNNER_TEMP/release-files/metadata.json"
           cp "$RUNNER_TEMP/rules.zip" "$RUNNER_TEMP/release-files/rules.zip"
+          cp "$RUNNER_TEMP/release-notes.md" "$RUNNER_TEMP/release-files/release-notes.md"
 
       - name: Upload release files
         if: steps.diff.outputs.changed == 'true'
@@ -129,8 +134,9 @@ jobs:
           tag="$(date -u +%F)"
           if gh release view "$tag" >/dev/null 2>&1; then
             gh release upload "$tag" release-files/metadata.json release-files/rules.zip --clobber
+            gh release edit "$tag" --notes-file release-files/release-notes.md
           else
             gh release create "$tag" release-files/metadata.json release-files/rules.zip \
               --title "CN Service CIDRs $tag" \
-              --notes "Automated CIDR update for $tag (UTC)."
+              --notes-file release-files/release-notes.md
           fi

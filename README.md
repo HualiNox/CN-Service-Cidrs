@@ -18,6 +18,8 @@ Browse the [complete collection of generated lists](https://rules.mewrix.com/).
 
 The generated `metadata.json` records each configured source's group, type, URL, SHA-256 of the fetched response body, and IPv4/IPv6 prefix counts after that source's prefixes are minimized. Per-source counts are diagnostic and are not additive because sources can overlap. Its `content_hash` is a deterministic hash of the generated `.txt` tables and is computed during the Go build.
 
+Release notes compare aggregate prefix counts and report source additions, removals, and content or count changes.
+
 ## Data sources
 
 ### `clash-list`
