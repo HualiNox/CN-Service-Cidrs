@@ -96,6 +96,13 @@ func Build(output string, sourceFiles []parser.SourceFile) ([]SourceStatus, erro
 	if err := writeDomainDirectorySummary(directoryDomains, tables); err != nil {
 		return nil, err
 	}
+	if err := writeAGHomeUpstream(
+		directoryDomains["CN"],
+		filepath.Join(tables, "aghome-upstream.txt"),
+		os.Getenv("AGHOME_UPSTREAM_DNS"),
+	); err != nil {
+		return nil, err
+	}
 
 	v4Exclusive := exclusiveAddressCounts(sourceIPv4, 32)
 	v6Exclusive := exclusiveAddressCounts(sourceIPv6, 128)

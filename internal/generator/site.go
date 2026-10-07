@@ -23,10 +23,12 @@ type pageData struct {
 	IPv4Count   int            `json:"ipv4_count"`
 	IPv6Count   int            `json:"ipv6_count"`
 	DomainCount int            `json:"domain_count"`
+	AGHomeCount int            `json:"aghome_upstream_count"`
 	AllURL      string         `json:"all_url"`
 	IPv4URL     string         `json:"ipv4_url"`
 	IPv6URL     string         `json:"ipv6_url"`
 	DomainURL   string         `json:"domain_url"`
+	AGHomeURL   string         `json:"aghome_upstream_url"`
 	Sources     []SourceStatus `json:"sources"`
 	Groups      []pageTable    `json:"groups"`
 	Directories []pageTable    `json:"directories"`
@@ -169,6 +171,10 @@ const indexTemplate = `<!doctype html>
 				<span>Domain rules</span>
 				<strong>{{.DomainCount}}</strong>
 			</div>
+			<div class="card">
+				<span>AdGuard Home rules</span>
+				<strong>{{.AGHomeCount}}</strong>
+			</div>
 		</div>
 
 		<h2>China aggregate</h2>
@@ -177,6 +183,7 @@ const indexTemplate = `<!doctype html>
 			<a href="{{.IPv4URL}}">IPv4</a>
 			<a href="{{.IPv6URL}}">IPv6</a>
 			{{if .DomainURL}}<a href="{{.DomainURL}}">Domain rules</a>{{end}}
+			{{if .AGHomeURL}}<a href="{{.AGHomeURL}}">AdGuard Home upstreams</a>{{end}}
 		</p>
 
 		<h2>Source groups</h2>
@@ -382,6 +389,12 @@ func newPageData(tables string, sourceFiles []parser.SourceFile, sources []Sourc
 	page.IPv4URL = china.IPv4URL
 	page.IPv6URL = china.IPv6URL
 	page.DomainURL = china.DomainURL
+	agHomePath := "aghome-upstream.txt"
+	page.AGHomeCount, err = countLines(filepath.Join(tables, agHomePath))
+	if err != nil {
+		return pageData{}, err
+	}
+	page.AGHomeURL = optionalTableURL(agHomePath, page.AGHomeCount)
 	return page, nil
 }
 

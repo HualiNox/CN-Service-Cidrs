@@ -18,6 +18,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      AGHOME_UPSTREAM_DNS: ${{ vars.AGHOME_UPSTREAM_DNS || 'https://dns.alidns.com/dns-query https://doh.pub/dns-query' }}
     permissions:
       contents: write
       pages: write
