@@ -21,12 +21,12 @@ func main() {
 		panic(err)
 	}
 
-	err = generator.Build(*output, sourceFiles)
+	sources, err := generator.Build(*output, sourceFiles)
 	if err != nil {
 		panic(err)
 	}
 
-	if err := generator.BuildSite(*output, *site, sourceFiles); err != nil {
+	if err := generator.BuildSite(*output, *site, sourceFiles, sources); err != nil {
 		panic(err)
 	}
 }

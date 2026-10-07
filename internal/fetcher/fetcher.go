@@ -2,7 +2,11 @@ package fetcher
 
 import (
 	"bufio"
+	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"net/netip"
@@ -16,21 +20,38 @@ var httpClient = http.Client{
 	Timeout: 30 * time.Second,
 }
 
-func Fetch(source parser.Source) (*IPPrefixes, error) {
-	switch source.Type {
-	case parser.ClashList:
-		return fetchClashList(source.Value)
-	case parser.SourceCIDR:
-		return fetchSourceCIDR(source.Value)
-	default:
-		log.Printf("warning: unsupported source type %q; skipping", source.Type)
-		return &IPPrefixes{}, nil
-	}
+type Result struct {
+	IPPrefixes IPPrefixes
+	SHA256     string
 }
 
-func fetchClashList(url string) (*IPPrefixes, error) {
-	var ipPrefixes IPPrefixes
+func Fetch(source parser.Source) (*Result, error) {
+	if source.Type != parser.ClashList && source.Type != parser.SourceCIDR {
+		log.Printf("warning: unsupported source type %q; skipping", source.Type)
+		return &Result{}, nil
+	}
 
+	content, err := fetchSource(source.Value)
+	if err != nil {
+		return nil, err
+	}
+
+	var prefixes *IPPrefixes
+	switch source.Type {
+	case parser.ClashList:
+		prefixes, err = parseClashList(source.Value, content)
+	case parser.SourceCIDR:
+		prefixes, err = parseSourceCIDR(source.Value, content)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	hash := sha256.Sum256(content)
+	return &Result{IPPrefixes: *prefixes, SHA256: hex.EncodeToString(hash[:])}, nil
+}
+
+func fetchSource(url string) ([]byte, error) {
 	resp, err := httpClient.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("request source %q: %w", url, err)
@@ -41,7 +62,16 @@ func fetchClashList(url string) (*IPPrefixes, error) {
 		return nil, fmt.Errorf("request source %q: unexpected HTTP status %s", url, resp.Status)
 	}
 
-	scanner := bufio.NewScanner(resp.Body)
+	content, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read source %q: %w", url, err)
+	}
+	return content, nil
+}
+
+func parseClashList(url string, content []byte) (*IPPrefixes, error) {
+	var ipPrefixes IPPrefixes
+	scanner := bufio.NewScanner(bytes.NewReader(content))
 	lineNo := 0
 	for scanner.Scan() {
 		lineNo++
@@ -108,20 +138,9 @@ func fetchClashList(url string) (*IPPrefixes, error) {
 	return &ipPrefixes, nil
 }
 
-func fetchSourceCIDR(url string) (*IPPrefixes, error) {
+func parseSourceCIDR(url string, content []byte) (*IPPrefixes, error) {
 	var ipPrefixes IPPrefixes
-
-	resp, err := httpClient.Get(url)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("request source %q: unexpected HTTP status %s", url, resp.Status)
-	}
-
-	scanner := bufio.NewScanner(resp.Body)
+	scanner := bufio.NewScanner(bytes.NewReader(content))
 	lineNo := 0
 	for scanner.Scan() {
 		lineNo++

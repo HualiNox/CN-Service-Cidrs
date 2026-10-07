@@ -15,14 +15,24 @@ import (
 )
 
 type pageData struct {
-	GeneratedAt string      `json:"generated_at"`
-	IPv4Count   int         `json:"ipv4_count"`
-	IPv6Count   int         `json:"ipv6_count"`
-	AllURL      string      `json:"all_url"`
-	IPv4URL     string      `json:"ipv4_url"`
-	IPv6URL     string      `json:"ipv6_url"`
-	Groups      []pageTable `json:"groups"`
-	Directories []pageTable `json:"directories"`
+	GeneratedAt string         `json:"generated_at"`
+	IPv4Count   int            `json:"ipv4_count"`
+	IPv6Count   int            `json:"ipv6_count"`
+	AllURL      string         `json:"all_url"`
+	IPv4URL     string         `json:"ipv4_url"`
+	IPv6URL     string         `json:"ipv6_url"`
+	Sources     []SourceStatus `json:"sources"`
+	Groups      []pageTable    `json:"groups"`
+	Directories []pageTable    `json:"directories"`
+}
+
+type SourceStatus struct {
+	Group     string            `json:"group"`
+	Type      parser.SourceType `json:"type"`
+	URL       string            `json:"url"`
+	SHA256    string            `json:"sha256"`
+	IPv4Count int               `json:"ipv4_count"`
+	IPv6Count int               `json:"ipv6_count"`
 }
 
 type pageTable struct {
@@ -88,6 +98,10 @@ const indexTemplate = `<!doctype html>
 			margin: 1rem 0 2rem;
 		}
 
+		.table-wrap {
+			overflow-x: auto;
+		}
+
 		th,
 		td {
 			text-align: left;
@@ -112,6 +126,13 @@ const indexTemplate = `<!doctype html>
 			td {
 				padding: .5rem .25rem;
 			}
+		}
+
+		.source-url,
+		.source-hash {
+			font-family: ui-monospace, monospace;
+			font-size: .85rem;
+			overflow-wrap: anywhere;
 		}
 	</style>
 </head>
@@ -163,6 +184,34 @@ const indexTemplate = `<!doctype html>
 			</tbody>
 		</table>
 
+		<h2>Source status</h2>
+		<div class="table-wrap">
+		<table>
+			<thead>
+				<tr>
+					<th>Group</th>
+					<th>Type</th>
+					<th>Source</th>
+					<th>IPv4 prefixes</th>
+					<th>IPv6 prefixes</th>
+					<th>SHA-256</th>
+				</tr>
+			</thead>
+			<tbody>
+			{{range .Sources}}
+			<tr>
+				<td>{{.Group}}</td>
+				<td>{{.Type}}</td>
+				<td class="source-url"><a href="{{.URL}}">{{.URL}}</a></td>
+				<td>{{.IPv4Count}}</td>
+				<td>{{.IPv6Count}}</td>
+				<td class="source-hash">{{.SHA256}}</td>
+			</tr>
+			{{end}}
+			</tbody>
+		</table>
+		</div>
+
 		<h2>Directory aggregates</h2>
 		<table>
 			<thead>
@@ -195,7 +244,7 @@ const indexTemplate = `<!doctype html>
 </html>
 `
 
-func BuildSite(output, site string, sourceFiles []parser.SourceFile) error {
+func BuildSite(output, site string, sourceFiles []parser.SourceFile, sources []SourceStatus) error {
 	if err := mkdirAll(site, true); err != nil {
 		return fmt.Errorf("prepare site directory %q: %w", site, err)
 	}
@@ -206,7 +255,7 @@ func BuildSite(output, site string, sourceFiles []parser.SourceFile) error {
 		return fmt.Errorf("copy tables into site: %w", err)
 	}
 
-	page, err := newPageData(siteTables, sourceFiles)
+	page, err := newPageData(siteTables, sourceFiles, sources)
 	if err != nil {
 		return err
 	}
@@ -242,9 +291,10 @@ func copyTables(source, destination string) error {
 	})
 }
 
-func newPageData(tables string, sourceFiles []parser.SourceFile) (pageData, error) {
+func newPageData(tables string, sourceFiles []parser.SourceFile, sources []SourceStatus) (pageData, error) {
 	page := pageData{
 		GeneratedAt: time.Now().UTC().Format(time.RFC3339),
+		Sources:     sources,
 		Groups:      make([]pageTable, 0, len(sourceFiles)),
 	}
 

@@ -16,6 +16,8 @@ Browse the [complete collection of generated lists](https://rules.mewrix.com/).
 
 `CN.txt` is the address-set union of every configured source group. Duplicate and overlapping ranges are removed, and adjacent CIDRs are combined whenever they exactly cover a parent prefix. The resulting list preserves the covered addresses but not the source or service category for each address. Use the individual source-group lists when that distinction matters.
 
+The generated `metadata.json` records each configured source's group, type, URL, SHA-256 of the fetched response body, and IPv4/IPv6 prefix counts after that source's prefixes are minimized. Per-source counts are diagnostic and are not additive because sources can overlap.
+
 ## Data sources
 
 ### `clash-list`

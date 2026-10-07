@@ -13,26 +13,41 @@ import (
 	"github.com/HualiNox/cn-service-cidrs/internal/parser"
 )
 
-func Build(output string, sourceFiles []parser.SourceFile) error {
+func Build(output string, sourceFiles []parser.SourceFile) ([]SourceStatus, error) {
 	if err := mkdirAll(output, true); err != nil {
-		return fmt.Errorf("prepare output directory %q: %w", output, err)
+		return nil, fmt.Errorf("prepare output directory %q: %w", output, err)
 	}
 
 	tables := filepath.Join(output, "tables")
 	if err := os.MkdirAll(tables, 0o755); err != nil {
-		return fmt.Errorf("create tables directory %q: %w", tables, err)
+		return nil, fmt.Errorf("create tables directory %q: %w", tables, err)
 	}
 
 	directoryPrefixes := make(map[string]fetcher.IPPrefixes)
+	sources := make([]SourceStatus, 0)
 	for _, sourceFile := range sourceFiles {
 		var ipPrefixes fetcher.IPPrefixes
 		for _, source := range sourceFile.Group.Sources {
-			sourcePrefixes, err := fetcher.Fetch(source)
+			result, err := fetcher.Fetch(source)
 			if err != nil {
-				return fmt.Errorf("fetch source %q in group %q: %w", source.Value, sourceFile.Group.Name, err)
+				return nil, fmt.Errorf("fetch source %q in group %q: %w", source.Value, sourceFile.Group.Name, err)
 			}
-			ipPrefixes.IPv4 = append(ipPrefixes.IPv4, sourcePrefixes.IPv4...)
-			ipPrefixes.IPv6 = append(ipPrefixes.IPv6, sourcePrefixes.IPv6...)
+
+			group := sourceFile.Group.Name
+			if sourceFile.Directory != "." {
+				group = filepath.ToSlash(filepath.Join(sourceFile.Directory, group))
+			}
+			sources = append(sources, SourceStatus{
+				Group:     group,
+				Type:      source.Type,
+				URL:       source.Value,
+				SHA256:    result.SHA256,
+				IPv4Count: len(minimize(result.IPPrefixes.IPv4)),
+				IPv6Count: len(minimize(result.IPPrefixes.IPv6)),
+			})
+
+			ipPrefixes.IPv4 = append(ipPrefixes.IPv4, result.IPPrefixes.IPv4...)
+			ipPrefixes.IPv6 = append(ipPrefixes.IPv6, result.IPPrefixes.IPv6...)
 		}
 
 		ipPrefixes.IPv4 = minimize(ipPrefixes.IPv4)
@@ -49,7 +64,7 @@ func Build(output string, sourceFiles []parser.SourceFile) error {
 			filepath.Join(tables, sourceFile.Directory),
 			sourceFile.Group.Name,
 		); err != nil {
-			return fmt.Errorf("write group %q: %w", sourceFile.Group.Name, err)
+			return nil, fmt.Errorf("write group %q: %w", sourceFile.Group.Name, err)
 		}
 
 		for dir := sourceFile.Directory; dir != "."; dir = filepath.Dir(dir) {
@@ -61,10 +76,10 @@ func Build(output string, sourceFiles []parser.SourceFile) error {
 	}
 
 	if err := writeDirectorySummary(directoryPrefixes, tables); err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return sources, nil
 }
 
 func mkdirAll(path string, removeExisting bool) error {
