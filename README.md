@@ -33,7 +33,7 @@ Country CSV sources contain `ip_range_start`, `ip_range_end`, and `country_code`
 
 ### `domain`
 
-Domain sources can point to a plain domain list or a Clash-style rule list. Plain domain lines are emitted as `domain:<value>`. Upstream `DOMAIN-SUFFIX`, `DOMAIN`, `DOMAIN-REGEX`, and `DOMAIN-KEYWORD` rules are emitted with the project prefixes `domain:`, `full:`, `regexp:`, and `keyword:` respectively; other Clash rule types are ignored. The mapped type and rule value are kept in separate `*-domain.txt` files, outside all CIDR lists and aggregates. Blank lines and lines beginning with `#` are ignored. For example, `DOMAIN-SUFFIX,bilibili.com` becomes `domain:bilibili.com`, `DOMAIN,example.cn` becomes `full:example.cn`, and `DOMAIN-REGEX,^foo[0-9]+\.example\.cn$` becomes `regexp:^foo[0-9]+\.example\.cn$`.
+Domain sources can point to a plain domain list or a Clash-style rule list. Plain domain lines are emitted as `domain:<value>`. Upstream `DOMAIN-SUFFIX`, `DOMAIN`, `DOMAIN-REGEX`, and `DOMAIN-KEYWORD` rules are emitted with the project prefixes `domain:`, `full:`, `regexp:`, and `keyword:` respectively; other Clash rule types are ignored. The mapped type and rule value are kept in separate `*-domain.txt` files, outside all CIDR lists and aggregates. Duplicate rules are removed. A broader `domain:` suffix also subsumes narrower `domain:` suffixes and covered `full:` rules; `regexp:` and `keyword:` rules are not merged. Blank lines and lines beginning with `#` are ignored. For example, `DOMAIN-SUFFIX,bilibili.com` becomes `domain:bilibili.com`, `DOMAIN,example.cn` becomes `full:example.cn`, and `DOMAIN-REGEX,^foo[0-9]+\.example\.cn$` becomes `regexp:^foo[0-9]+\.example\.cn$`.
 
 ```yaml
 name: BiliBiliDomains

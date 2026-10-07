@@ -6,9 +6,12 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
 )
 
 func writeDomainRules(rules []string, path, name string) error {
+	rules = minimizeDomainRules(rules)
 	if len(rules) == 0 {
 		log.Printf("no domain rules found for %q; skipping output", filepath.Join(path, name))
 		return nil
@@ -28,6 +31,101 @@ func writeDomainRules(rules []string, path, name string) error {
 		}
 	}
 	return nil
+}
+
+func minimizeDomainRules(rules []string) []string {
+	domainValues := make(map[string]struct{})
+	for _, rule := range rules {
+		kind, value, ok := strings.Cut(rule, ":")
+		if ok && kind == "domain" {
+			domainValues[strings.ToLower(value)] = struct{}{}
+		}
+	}
+
+	orderedDomains := make([]string, 0, len(domainValues))
+	for value := range domainValues {
+		orderedDomains = append(orderedDomains, value)
+	}
+	sort.Slice(orderedDomains, func(i, j int) bool {
+		iLabels := strings.Count(orderedDomains[i], ".")
+		jLabels := strings.Count(orderedDomains[j], ".")
+		if iLabels != jLabels {
+			return iLabels < jLabels
+		}
+		return orderedDomains[i] < orderedDomains[j]
+	})
+
+	keptDomains := make(map[string]struct{}, len(orderedDomains))
+	for _, candidate := range orderedDomains {
+		covered := false
+		for dot := strings.IndexByte(candidate, '.'); dot >= 0; {
+			parent := candidate[dot+1:]
+			if _, exists := keptDomains[parent]; exists {
+				covered = true
+				break
+			}
+			nextDot := strings.IndexByte(candidate[dot+1:], '.')
+			if nextDot < 0 {
+				break
+			}
+			dot += nextDot + 1
+		}
+		if !covered {
+			keptDomains[candidate] = struct{}{}
+		}
+	}
+
+	result := make([]string, 0, len(rules))
+	seen := make(map[string]struct{}, len(rules))
+	for _, rule := range rules {
+		kind, value, ok := strings.Cut(rule, ":")
+		if !ok {
+			if _, exists := seen[rule]; !exists {
+				seen[rule] = struct{}{}
+				result = append(result, rule)
+			}
+			continue
+		}
+
+		valueKey := value
+		switch kind {
+		case "domain":
+			valueKey = strings.ToLower(value)
+			if _, keep := keptDomains[valueKey]; !keep {
+				continue
+			}
+		case "full":
+			valueKey = strings.ToLower(value)
+			if coveredByDomainSuffix(valueKey, keptDomains) {
+				continue
+			}
+		}
+
+		key := kind + ":" + valueKey
+		if _, exists := seen[key]; exists {
+			continue
+		}
+		seen[key] = struct{}{}
+		result = append(result, rule)
+	}
+	return result
+}
+
+func coveredByDomainSuffix(host string, suffixes map[string]struct{}) bool {
+	if _, exists := suffixes[host]; exists {
+		return true
+	}
+	for dot := strings.IndexByte(host, '.'); dot >= 0; {
+		if _, exists := suffixes[host[dot+1:]]; exists {
+			return true
+		}
+		nextDot := strings.IndexByte(host[dot+1:], '.')
+		if nextDot < 0 {
+			break
+		}
+		dot += nextDot + 1
+	}
+	return false
 }
 
 func writeDomainDirectorySummary(directoryRules map[string][]string, path string) error {
