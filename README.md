@@ -23,7 +23,7 @@ Release notes compare aggregate prefix counts and report source additions, remov
 
 ## Licensing
 
-Code and generated data have separate licensing terms. A license covering the code does not automatically cover the generated CIDR lists, which are derived from multiple upstream datasets. See [SOURCES.md](SOURCES.md) and the source list below for information about the data sources.
+The [MIT License](LICENSE) applies only to the project code; it does not apply to generated CIDR data. The generated lists derive from multiple upstream datasets and may be subject to their respective terms. See [SOURCES.md](SOURCES.md) and the source list below for information about the data sources.
 
 ## Data sources
 
