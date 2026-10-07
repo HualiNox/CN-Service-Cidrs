@@ -8,9 +8,10 @@ Non-canonical CIDRs are rejected rather than automatically masked, to avoid sile
 
 | List | Download |
 | --- | --- |
-| All China prefixes | [CN.txt](https://rules.mewrix.com/tables/CN.txt) |
-| China IPv4 prefixes | [CN-ipv4.txt](https://rules.mewrix.com/tables/CN-ipv4.txt) |
-| China IPv6 prefixes | [CN-ipv6.txt](https://rules.mewrix.com/tables/CN-ipv6.txt) |
+| Combined CN service & routing prefixes | [CN.txt](https://rules.mewrix.com/tables/CN.txt) |
+| Combined CN IPv4 prefixes | [CN-ipv4.txt](https://rules.mewrix.com/tables/CN-ipv4.txt) |
+| Combined CN IPv6 prefixes | [CN-ipv6.txt](https://rules.mewrix.com/tables/CN-ipv6.txt) |
+| China routing / GeoIP-oriented aggregate | [ChinaRoute.txt](https://rules.mewrix.com/tables/CN/ChinaRoute.txt) |
 
 Browse the [complete collection of generated lists](https://rules.mewrix.com/).
 
