@@ -22,9 +22,11 @@ type pageData struct {
 	ContentHash string         `json:"content_hash"`
 	IPv4Count   int            `json:"ipv4_count"`
 	IPv6Count   int            `json:"ipv6_count"`
+	DomainCount int            `json:"domain_count"`
 	AllURL      string         `json:"all_url"`
 	IPv4URL     string         `json:"ipv4_url"`
 	IPv6URL     string         `json:"ipv6_url"`
+	DomainURL   string         `json:"domain_url"`
 	Sources     []SourceStatus `json:"sources"`
 	Groups      []pageTable    `json:"groups"`
 	Directories []pageTable    `json:"directories"`
@@ -163,6 +165,10 @@ const indexTemplate = `<!doctype html>
 				<span>IPv6 prefixes</span>
 				<strong>{{.IPv6Count}}</strong>
 			</div>
+			<div class="card">
+				<span>Domain rules</span>
+				<strong>{{.DomainCount}}</strong>
+			</div>
 		</div>
 
 		<h2>China aggregate</h2>
@@ -170,6 +176,7 @@ const indexTemplate = `<!doctype html>
 			<a href="{{.AllURL}}">All prefixes</a>
 			<a href="{{.IPv4URL}}">IPv4</a>
 			<a href="{{.IPv6URL}}">IPv6</a>
+			{{if .DomainURL}}<a href="{{.DomainURL}}">Domain rules</a>{{end}}
 		</p>
 
 		<h2>Source groups</h2>
@@ -370,9 +377,11 @@ func newPageData(tables string, sourceFiles []parser.SourceFile, sources []Sourc
 	}
 	page.IPv4Count = china.IPv4Count
 	page.IPv6Count = china.IPv6Count
+	page.DomainCount = china.DomainCount
 	page.AllURL = china.AllURL
 	page.IPv4URL = china.IPv4URL
 	page.IPv6URL = china.IPv6URL
+	page.DomainURL = china.DomainURL
 	return page, nil
 }
 

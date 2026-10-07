@@ -1,0 +1,12 @@
+name: SourceDomain
+
+sources:
+  # v2fly exports cn as a flattened combination of geolocation-cn and tld-cn.
+  - type: domain
+    value: https://raw.githubusercontent.com/v2fly/domain-list-community/release/cn.txt
+
+  - type: domain
+    value: https://raw.githubusercontent.com/felixonmars/dnsmasq-china-list/master/accelerated-domains.china.conf
+
+  - type: domain
+    value: https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Surge/ChinaMax/ChinaMax_Domain.list

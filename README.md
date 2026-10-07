@@ -1,6 +1,6 @@
 # cn-service-cidrs
 
-Ready-to-use IPv4 and IPv6 CIDR lists for China, built from community-maintained rule lists and public routing datasets. Entries are combined, deduplicated, and refreshed daily when the upstream data changes.
+Ready-to-use IPv4 and IPv6 CIDR lists plus domain rules for China, built from community-maintained rule lists and public routing datasets. Entries are combined, deduplicated, and refreshed daily when the upstream data changes.
 
 Non-canonical CIDRs are rejected rather than automatically masked, to avoid silently expanding malformed upstream prefixes.
 
@@ -11,6 +11,7 @@ Non-canonical CIDRs are rejected rather than automatically masked, to avoid sile
 | Combined CN service & routing prefixes | [CN.txt](https://rules.mewrix.com/tables/CN.txt) |
 | Combined CN IPv4 prefixes | [CN-ipv4.txt](https://rules.mewrix.com/tables/CN-ipv4.txt) |
 | Combined CN IPv6 prefixes | [CN-ipv6.txt](https://rules.mewrix.com/tables/CN-ipv6.txt) |
+| Combined CN domain rules | [CN-domain.txt](https://rules.mewrix.com/tables/CN-domain.txt) |
 | China routing / GeoIP-oriented aggregate | [ChinaRoute.txt](https://rules.mewrix.com/tables/CN/ChinaRoute.txt) |
 
 Browse the [complete collection of generated lists](https://rules.mewrix.com/).
@@ -33,7 +34,7 @@ Country CSV sources contain `ip_range_start`, `ip_range_end`, and `country_code`
 
 ### `domain`
 
-Domain sources can point to a plain domain list or a Clash-style rule list. Plain domain lines are emitted as `domain:<value>`. Upstream `DOMAIN-SUFFIX`, `DOMAIN`, `DOMAIN-REGEX`, and `DOMAIN-KEYWORD` rules are emitted with the project prefixes `domain:`, `full:`, `regexp:`, and `keyword:` respectively; other Clash rule types are ignored. The mapped type and rule value are kept in separate `*-domain.txt` files, outside all CIDR lists and aggregates. Duplicate rules are removed. A broader `domain:` suffix also subsumes narrower `domain:` suffixes and covered `full:` rules; `regexp:` and `keyword:` rules are not merged. Blank lines and lines beginning with `#` are ignored. For example, `DOMAIN-SUFFIX,bilibili.com` becomes `domain:bilibili.com`, `DOMAIN,example.cn` becomes `full:example.cn`, and `DOMAIN-REGEX,^foo[0-9]+\.example\.cn$` becomes `regexp:^foo[0-9]+\.example\.cn$`.
+Domain sources support plain domain lists, Clash-style rules, v2fly domain-list-community exports, dnsmasq `server=/domain/DNS` entries, and the Surge ChinaMax domain list. Rules are emitted with the project prefixes `domain:`, `full:`, `regexp:`, and `keyword:`; unsupported non-domain rules are ignored. v2fly's `domain`, `full`, `regexp`, and `keyword` types are preserved, while list attributes are discarded. dnsmasq entries become `domain:` suffix rules. In Surge ChinaMax, a leading dot becomes a `domain:` suffix rule and an unprefixed hostname becomes a `full:` exact rule. The mapped type and rule value are kept in separate `*-domain.txt` files, outside all CIDR lists and aggregates. Duplicate rules are removed. A broader `domain:` suffix also subsumes narrower `domain:` suffixes and covered `full:` rules; `regexp:` and `keyword:` rules are not merged. Blank lines and lines beginning with `#` are ignored. For example, `DOMAIN-SUFFIX,bilibili.com` becomes `domain:bilibili.com`, `DOMAIN,example.cn` becomes `full:example.cn`, and `DOMAIN-REGEX,^foo[0-9]+\.example\.cn$` becomes `regexp:^foo[0-9]+\.example\.cn$`.
 
 ```yaml
 name: BiliBiliDomains
@@ -70,6 +71,12 @@ sources:
 #### [blackmatrix7/ios_rule_script](https://github.com/blackmatrix7/ios_rule_script)
 
 - [ChinaIPs](https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/ChinaIPs/ChinaIPs.list)
+- [ChinaMax_Domain](https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Surge/ChinaMax/ChinaMax_Domain.list)
+
+### Domain sources
+
+- [v2fly/domain-list-community `cn` export](https://raw.githubusercontent.com/v2fly/domain-list-community/release/cn.txt), which combines `geolocation-cn` and `tld-cn`
+- [felixonmars/dnsmasq-china-list accelerated domains](https://raw.githubusercontent.com/felixonmars/dnsmasq-china-list/master/accelerated-domains.china.conf)
 
 ### `cidr`
 
