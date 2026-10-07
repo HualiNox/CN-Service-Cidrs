@@ -35,8 +35,8 @@ func Build(output string, sourceFiles []parser.SourceFile) error {
 			ipPrefixes.IPv6 = append(ipPrefixes.IPv6, sourcePrefixes.IPv6...)
 		}
 
-		ipPrefixes.IPv4 = dedup(ipPrefixes.IPv4)
-		ipPrefixes.IPv6 = dedup(ipPrefixes.IPv6)
+		ipPrefixes.IPv4 = minimize(ipPrefixes.IPv4)
+		ipPrefixes.IPv6 = minimize(ipPrefixes.IPv6)
 
 		log.Printf(
 			"group %q: IPv4=%d, IPv6=%d",
@@ -54,8 +54,8 @@ func Build(output string, sourceFiles []parser.SourceFile) error {
 
 		for dir := sourceFile.Directory; dir != "."; dir = filepath.Dir(dir) {
 			prefixes := directoryPrefixes[dir]
-			prefixes.IPv4 = dedup(append(prefixes.IPv4, ipPrefixes.IPv4...))
-			prefixes.IPv6 = dedup(append(prefixes.IPv6, ipPrefixes.IPv6...))
+			prefixes.IPv4 = minimize(append(prefixes.IPv4, ipPrefixes.IPv4...))
+			prefixes.IPv6 = minimize(append(prefixes.IPv6, ipPrefixes.IPv6...))
 			directoryPrefixes[dir] = prefixes
 		}
 	}
@@ -86,16 +86,20 @@ func mkdirAll(path string, removeExisting bool) error {
 	return nil
 }
 
-func dedup(prefixes []netip.Prefix) []netip.Prefix {
-	set := make(map[netip.Prefix]struct{}, len(prefixes))
+func minimize(prefixes []netip.Prefix) []netip.Prefix {
+	var ipv4Root, ipv6Root *prefixNode
 	for _, prefix := range prefixes {
-		set[prefix.Masked()] = struct{}{}
+		prefix = prefix.Masked()
+		if prefix.Addr().Is4() {
+			ipv4Root = insertPrefix(ipv4Root, prefix, 0)
+		} else {
+			ipv6Root = insertPrefix(ipv6Root, prefix, 0)
+		}
 	}
 
-	result := make([]netip.Prefix, 0, len(set))
-	for prefix := range set {
-		result = append(result, prefix)
-	}
+	result := make([]netip.Prefix, 0, len(prefixes))
+	collectPrefixes(ipv4Root, make([]byte, 4), 0, true, &result)
+	collectPrefixes(ipv6Root, make([]byte, 16), 0, false, &result)
 	sort.Slice(result, func(i, j int) bool {
 		if order := result[i].Addr().Compare(result[j].Addr()); order != 0 {
 			return order < 0
@@ -103,6 +107,75 @@ func dedup(prefixes []netip.Prefix) []netip.Prefix {
 		return result[i].Bits() < result[j].Bits()
 	})
 	return result
+}
+
+type prefixNode struct {
+	full     bool
+	children [2]*prefixNode
+}
+
+func insertPrefix(node *prefixNode, prefix netip.Prefix, depth int) *prefixNode {
+	if node == nil {
+		node = &prefixNode{}
+	}
+	if node.full {
+		return node
+	}
+	if depth == prefix.Bits() {
+		node.full = true
+		node.children = [2]*prefixNode{}
+		return node
+	}
+
+	bit := addressBit(prefix.Addr(), depth)
+	node.children[bit] = insertPrefix(node.children[bit], prefix, depth+1)
+	if node.children[0] != nil && node.children[0].full && node.children[1] != nil && node.children[1].full {
+		node.full = true
+		node.children = [2]*prefixNode{}
+	}
+	return node
+}
+
+func addressBit(addr netip.Addr, bit int) int {
+	if addr.Is4() {
+		bytes := addr.As4()
+		return int((bytes[bit/8] >> (7 - bit%8)) & 1)
+	}
+	bytes := addr.As16()
+	return int((bytes[bit/8] >> (7 - bit%8)) & 1)
+}
+
+func collectPrefixes(node *prefixNode, address []byte, depth int, ipv4 bool, prefixes *[]netip.Prefix) {
+	if node == nil {
+		return
+	}
+	if node.full {
+		var addr netip.Addr
+		if ipv4 {
+			var bytes [4]byte
+			copy(bytes[:], address)
+			addr = netip.AddrFrom4(bytes)
+		} else {
+			var bytes [16]byte
+			copy(bytes[:], address)
+			addr = netip.AddrFrom16(bytes)
+		}
+		*prefixes = append(*prefixes, netip.PrefixFrom(addr, depth))
+		return
+	}
+
+	for bit, child := range node.children {
+		if child == nil {
+			continue
+		}
+		if bit == 1 {
+			address[depth/8] |= 1 << (7 - depth%8)
+		}
+		collectPrefixes(child, address, depth+1, ipv4, prefixes)
+		if bit == 1 {
+			address[depth/8] &^= 1 << (7 - depth%8)
+		}
+	}
 }
 
 func writeIPCIDRs(ipPrefixes fetcher.IPPrefixes, path, name string) error {
