@@ -12,6 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       AGHOME_UPSTREAM_DNS: ${{ vars.AGHOME_UPSTREAM_DNS || 'https://dns.alidns.com/dns-query https://doh.pub/dns-query' }}
+      TECHNITIUM_UPSTREAM_DNS: ${{ vars.TECHNITIUM_UPSTREAM_DNS || 'https://dns.alidns.com/dns-query (223.5.5.5)' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -56,6 +57,39 @@ jobs:
           while IFS= read -r line; do
             if [[ "$line" != *"]${AGHOME_UPSTREAM_DNS}" ]]; then
               echo "AdGuard Home upstream rule does not end with the configured upstreams: $line"
+              exit 1
+            fi
+          done < "$file"
+
+      - name: Validate Technitium upstream rules
+        shell: bash
+        run: |
+          set -euo pipefail
+          file="output/tables/technitium-upstream.txt"
+
+          if [[ ! -s "$file" ]]; then
+            echo "Technitium upstream rules file is missing or empty."
+            exit 1
+          fi
+
+          if LC_ALL=C grep -Pn '[^\x00-\x7F]' "$file"; then
+            echo "Technitium upstream rules contain non-ASCII characters."
+            exit 1
+          fi
+
+          if grep -nF '[//]' "$file"; then
+            echo "Technitium upstream rules contain an empty domain group."
+            exit 1
+          fi
+
+          if grep -Pv '^\[/[^]]+/\].+$' "$file"; then
+            echo "Technitium upstream rules contain a malformed line."
+            exit 1
+          fi
+
+          while IFS= read -r line; do
+            if [[ "$line" != *"]${TECHNITIUM_UPSTREAM_DNS}" ]]; then
+              echo "Technitium upstream rule does not end with the configured upstream: $line"
               exit 1
             fi
           done < "$file"

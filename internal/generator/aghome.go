@@ -12,23 +12,32 @@ import (
 )
 
 const defaultAGHomeUpstreamDNS = "https://dns.alidns.com/dns-query https://doh.pub/dns-query"
+const defaultTechnitiumUpstreamDNS = "https://dns.alidns.com/dns-query (223.5.5.5)"
 
 const (
-	agHomeMaxDomainsPerRule = 100
-	agHomeMaxRuleBytes      = 4096
+	domainUpstreamMaxDomainsPerRule = 100
+	domainUpstreamMaxRuleBytes      = 4096
 )
 
 func writeAGHomeUpstream(rules []string, path, upstream string) error {
+	return writeDomainUpstream("AGH", rules, path, upstream, defaultAGHomeUpstreamDNS)
+}
+
+func writeTechnitiumUpstream(rules []string, path, upstream string) error {
+	return writeDomainUpstream("Technitium", rules, path, upstream, defaultTechnitiumUpstreamDNS)
+}
+
+func writeDomainUpstream(product string, rules []string, path, upstream, defaultUpstream string) error {
 	upstream = strings.TrimSpace(upstream)
 	if upstream == "" {
-		upstream = defaultAGHomeUpstreamDNS
+		upstream = defaultUpstream
 	}
 	if strings.ContainsAny(upstream, "\r\n") {
-		return fmt.Errorf("AGH upstream DNS must be a single line")
+		return fmt.Errorf("%s upstream DNS must be a single line", product)
 	}
 	upstreams := strings.Fields(upstream)
 	if len(upstreams) == 0 {
-		upstream = defaultAGHomeUpstreamDNS
+		upstream = defaultUpstream
 	} else {
 		upstream = strings.Join(upstreams, " ")
 	}
@@ -58,16 +67,16 @@ func writeAGHomeUpstream(rules []string, path, upstream string) error {
 
 	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
 	if err != nil {
-		return fmt.Errorf("create AGH upstream file %q: %w", path, err)
+		return fmt.Errorf("create %s upstream file %q: %w", product, path, err)
 	}
 	defer func() { _ = file.Close() }()
 
 	baseLength := len("[/") + len("/]") + len(upstream)
-	if baseLength >= agHomeMaxRuleBytes {
-		return fmt.Errorf("AGH upstream DNS config is too long (%d bytes)", len(upstream))
+	if baseLength >= domainUpstreamMaxRuleBytes {
+		return fmt.Errorf("%s upstream DNS config is too long (%d bytes)", product, len(upstream))
 	}
 
-	group := make([]string, 0, agHomeMaxDomainsPerRule)
+	group := make([]string, 0, domainUpstreamMaxDomainsPerRule)
 	groupLength := baseLength
 	groupCount := 0
 	writeGroup := func() error {
@@ -76,7 +85,7 @@ func writeAGHomeUpstream(rules []string, path, upstream string) error {
 		}
 		line := "[/" + strings.Join(group, "/") + "/]" + upstream + "\n"
 		if _, err := io.WriteString(file, line); err != nil {
-			return fmt.Errorf("write AGH upstream file %q: %w", path, err)
+			return fmt.Errorf("write %s upstream file %q: %w", product, path, err)
 		}
 		groupCount++
 		group = group[:0]
@@ -89,14 +98,14 @@ func writeAGHomeUpstream(rules []string, path, upstream string) error {
 		if len(group) > 0 {
 			addedLength++ // separator slash
 		}
-		if len(group) >= agHomeMaxDomainsPerRule || groupLength+addedLength > agHomeMaxRuleBytes {
+		if len(group) >= domainUpstreamMaxDomainsPerRule || groupLength+addedLength > domainUpstreamMaxRuleBytes {
 			if err := writeGroup(); err != nil {
 				return err
 			}
 			addedLength = len(domain)
 		}
-		if groupLength+addedLength > agHomeMaxRuleBytes {
-			return fmt.Errorf("domain %q is too long for an AGH upstream rule", domain)
+		if groupLength+addedLength > domainUpstreamMaxRuleBytes {
+			return fmt.Errorf("domain %q is too long for a %s upstream rule", domain, product)
 		}
 		group = append(group, domain)
 		groupLength += addedLength
@@ -104,6 +113,6 @@ func writeAGHomeUpstream(rules []string, path, upstream string) error {
 	if err := writeGroup(); err != nil {
 		return err
 	}
-	log.Printf("AGH upstream: wrote %d domain suffixes in %d rules using %q to %q", len(domains), groupCount, upstream, path)
+	log.Printf("%s upstream: wrote %d domain suffixes in %d rules using %q to %q", product, len(domains), groupCount, upstream, path)
 	return nil
 }

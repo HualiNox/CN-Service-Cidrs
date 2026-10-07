@@ -18,20 +18,22 @@ import (
 )
 
 type pageData struct {
-	GeneratedAt string         `json:"generated_at"`
-	ContentHash string         `json:"content_hash"`
-	IPv4Count   int            `json:"ipv4_count"`
-	IPv6Count   int            `json:"ipv6_count"`
-	DomainCount int            `json:"domain_count"`
-	AGHomeCount int            `json:"aghome_upstream_count"`
-	AllURL      string         `json:"all_url"`
-	IPv4URL     string         `json:"ipv4_url"`
-	IPv6URL     string         `json:"ipv6_url"`
-	DomainURL   string         `json:"domain_url"`
-	AGHomeURL   string         `json:"aghome_upstream_url"`
-	Sources     []SourceStatus `json:"sources"`
-	Groups      []pageTable    `json:"groups"`
-	Directories []pageTable    `json:"directories"`
+	GeneratedAt     string         `json:"generated_at"`
+	ContentHash     string         `json:"content_hash"`
+	IPv4Count       int            `json:"ipv4_count"`
+	IPv6Count       int            `json:"ipv6_count"`
+	DomainCount     int            `json:"domain_count"`
+	AGHomeCount     int            `json:"aghome_upstream_count"`
+	TechnitiumCount int            `json:"technitium_upstream_count"`
+	AllURL          string         `json:"all_url"`
+	IPv4URL         string         `json:"ipv4_url"`
+	IPv6URL         string         `json:"ipv6_url"`
+	DomainURL       string         `json:"domain_url"`
+	AGHomeURL       string         `json:"aghome_upstream_url"`
+	TechnitiumURL   string         `json:"technitium_upstream_url"`
+	Sources         []SourceStatus `json:"sources"`
+	Groups          []pageTable    `json:"groups"`
+	Directories     []pageTable    `json:"directories"`
 }
 
 type SourceStatus struct {
@@ -175,6 +177,10 @@ const indexTemplate = `<!doctype html>
 				<span>AdGuard Home rules</span>
 				<strong>{{.AGHomeCount}}</strong>
 			</div>
+			<div class="card">
+				<span>Technitium rules</span>
+				<strong>{{.TechnitiumCount}}</strong>
+			</div>
 		</div>
 
 		<h2>China aggregate</h2>
@@ -184,6 +190,7 @@ const indexTemplate = `<!doctype html>
 			<a href="{{.IPv6URL}}">IPv6</a>
 			{{if .DomainURL}}<a href="{{.DomainURL}}">Domain rules</a>{{end}}
 			{{if .AGHomeURL}}<a href="{{.AGHomeURL}}">AdGuard Home upstreams</a>{{end}}
+			{{if .TechnitiumURL}}<a href="{{.TechnitiumURL}}">Technitium upstreams</a>{{end}}
 		</p>
 
 		<h2>Source groups</h2>
@@ -395,6 +402,12 @@ func newPageData(tables string, sourceFiles []parser.SourceFile, sources []Sourc
 		return pageData{}, err
 	}
 	page.AGHomeURL = optionalTableURL(agHomePath, page.AGHomeCount)
+	technitiumPath := "technitium-upstream.txt"
+	page.TechnitiumCount, err = countLines(filepath.Join(tables, technitiumPath))
+	if err != nil {
+		return pageData{}, err
+	}
+	page.TechnitiumURL = optionalTableURL(technitiumPath, page.TechnitiumCount)
 	return page, nil
 }
 

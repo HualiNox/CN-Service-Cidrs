@@ -20,6 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       AGHOME_UPSTREAM_DNS: ${{ vars.AGHOME_UPSTREAM_DNS || 'https://dns.alidns.com/dns-query https://doh.pub/dns-query' }}
+      TECHNITIUM_UPSTREAM_DNS: ${{ vars.TECHNITIUM_UPSTREAM_DNS || 'https://dns.alidns.com/dns-query (223.5.5.5)' }}
     permissions:
       contents: write
       pages: write

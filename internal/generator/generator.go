@@ -103,6 +103,13 @@ func Build(output string, sourceFiles []parser.SourceFile) ([]SourceStatus, erro
 	); err != nil {
 		return nil, err
 	}
+	if err := writeTechnitiumUpstream(
+		directoryDomains["CN"],
+		filepath.Join(tables, "technitium-upstream.txt"),
+		os.Getenv("TECHNITIUM_UPSTREAM_DNS"),
+	); err != nil {
+		return nil, err
+	}
 
 	v4Exclusive := exclusiveAddressCounts(sourceIPv4, 32)
 	v6Exclusive := exclusiveAddressCounts(sourceIPv6, 128)
