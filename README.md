@@ -71,6 +71,7 @@ The [MIT License](LICENSE) applies only to the project code; it does not apply t
 
 #### IP database oriented
 
+- [sapics/ip-location-db server-country IPv4](https://github.com/sapics/ip-location-db/releases/download/latest/server-country-ipv4.csv) and [IPv6](https://github.com/sapics/ip-location-db/releases/download/latest/server-country-ipv6.csv) (country code `CN`)
 - [clang.cn all_cn_ipv46.txt](https://ispip.clang.cn/all_cn_ipv46.txt) ([source site](https://ispip.clang.cn))
 - [metowolf/iplist China](https://metowolf.github.io/iplist/data/special/china.txt) ([repository](https://github.com/metowolf/iplist))
 

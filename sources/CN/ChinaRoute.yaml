@@ -19,6 +19,15 @@ sources:
   - type: cidr
     value: https://raw.githubusercontent.com/misakaio/chnroutes2/master/chnroutes.txt
 
+  # Server country database
+  - type: country-csv
+    country_code: CN
+    value: https://github.com/sapics/ip-location-db/releases/download/latest/server-country-ipv4.csv
+
+  - type: country-csv
+    country_code: CN
+    value: https://github.com/sapics/ip-location-db/releases/download/latest/server-country-ipv6.csv
+
   # IP database oriented
   - type: cidr
     value: https://ispip.clang.cn/all_cn_ipv46.txt

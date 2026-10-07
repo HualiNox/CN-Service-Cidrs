@@ -5,11 +5,13 @@ type SourceType string
 const (
 	ClashList  SourceType = "clash-list"
 	SourceCIDR SourceType = "cidr"
+	CountryCSV SourceType = "country-csv"
 )
 
 type Source struct {
-	Type  SourceType `yaml:"type" validate:"required,oneof=clash-list cidr"`
-	Value string     `yaml:"value" validate:"required"`
+	Type        SourceType `yaml:"type" validate:"required,oneof=clash-list cidr country-csv"`
+	Value       string     `yaml:"value" validate:"required"`
+	CountryCode string     `yaml:"country_code" validate:"required_if=Type country-csv,omitempty,len=2,uppercase"`
 }
 
 type SourceGroup struct {

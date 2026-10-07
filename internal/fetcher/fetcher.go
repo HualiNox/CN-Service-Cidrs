@@ -27,7 +27,7 @@ type Result struct {
 }
 
 func Fetch(source parser.Source) (*Result, error) {
-	if source.Type != parser.ClashList && source.Type != parser.SourceCIDR {
+	if source.Type != parser.ClashList && source.Type != parser.SourceCIDR && source.Type != parser.CountryCSV {
 		log.Printf("warning: unsupported source type %q; skipping", source.Type)
 		return &Result{}, nil
 	}
@@ -44,6 +44,8 @@ func Fetch(source parser.Source) (*Result, error) {
 		prefixes, rejectedCIDRCount, err = parseClashList(source.Value, content)
 	case parser.SourceCIDR:
 		prefixes, rejectedCIDRCount, err = parseSourceCIDR(source.Value, content)
+	case parser.CountryCSV:
+		prefixes, rejectedCIDRCount, err = parseCountryCSV(source.Value, content, source.CountryCode)
 	}
 	if err != nil {
 		return nil, err
