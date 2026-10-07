@@ -52,21 +52,60 @@ func Fetch(source parser.Source) (*Result, error) {
 }
 
 func fetchSource(url string) ([]byte, error) {
-	resp, err := httpClient.Get(url)
-	if err != nil {
-		return nil, fmt.Errorf("request source %q: %w", url, err)
-	}
-	defer resp.Body.Close()
+	retryDelays := [...]time.Duration{time.Second, 3 * time.Second, 8 * time.Second}
+	var lastErr error
+	for attempt := 0; attempt <= len(retryDelays); attempt++ {
+		req, err := http.NewRequest(http.MethodGet, url, nil)
+		if err != nil {
+			return nil, fmt.Errorf("create request for source %q: %w", url, err)
+		}
+		req.Header.Set("User-Agent", "cn-service-cidrs (+https://github.com/HualiNox/cn-service-cidrs)")
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("request source %q: unexpected HTTP status %s", url, resp.Status)
-	}
+		resp, err := httpClient.Do(req)
+		retryable := false
+		if err != nil {
+			lastErr = err
+			retryable = true
+		} else if resp.StatusCode != http.StatusOK {
+			lastErr = fmt.Errorf("unexpected HTTP status %s", resp.Status)
+			retryable = retryableStatus(resp.StatusCode)
+			_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 64*1024))
+			_ = resp.Body.Close()
+		} else {
+			content, readErr := io.ReadAll(resp.Body)
+			_ = resp.Body.Close()
+			if readErr == nil {
+				return content, nil
+			}
+			lastErr = fmt.Errorf("read response body: %w", readErr)
+			retryable = true
+		}
 
-	content, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("read source %q: %w", url, err)
+		if !retryable {
+			return nil, fmt.Errorf("request source %q: %w", url, lastErr)
+		}
+		if attempt == len(retryDelays) {
+			return nil, fmt.Errorf("request source %q failed after %d attempts: %w", url, attempt+1, lastErr)
+		}
+
+		delay := retryDelays[attempt]
+		log.Printf(
+			"warning: request source %q failed on attempt %d/%d: %v; retrying in %s",
+			url,
+			attempt+1,
+			len(retryDelays)+1,
+			lastErr,
+			delay,
+		)
+		time.Sleep(delay)
 	}
-	return content, nil
+	return nil, fmt.Errorf("request source %q failed: %w", url, lastErr)
+}
+
+func retryableStatus(statusCode int) bool {
+	return statusCode == http.StatusRequestTimeout ||
+		statusCode == http.StatusTooManyRequests ||
+		statusCode >= http.StatusInternalServerError
 }
 
 func parseClashList(url string, content []byte) (*IPPrefixes, error) {
