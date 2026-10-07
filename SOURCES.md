@@ -2,6 +2,8 @@
 
 The CIDR lists published by this project combine data from multiple upstream projects and public datasets. These generated lists are derived data and may be subject to the licenses and terms that apply to their upstream sources.
 
+The `ChinaRoute` group includes [misakaio/chnroutes2](https://github.com/misakaio/chnroutes2), an aggregate based on multiple BGP feeds. The upstream project updates its routes hourly and licenses its data under [CC BY-SA](https://github.com/misakaio/chnroutes2#license).
+
 Licensing for the project code is separate from licensing for the generated data. Any license covering the code does not replace, override, or grant rights under the licenses or terms of the upstream data. No single blanket license is asserted for the generated CIDR data.
 
 ## Source inventory

@@ -67,6 +67,7 @@ The [MIT License](LICENSE) applies only to the project code; it does not apply t
 
 - [gaoyifan/china-operator-ip IPv4](https://raw.githubusercontent.com/gaoyifan/china-operator-ip/ip-lists/china.txt) ([repository](https://github.com/gaoyifan/china-operator-ip))
 - [gaoyifan/china-operator-ip IPv6](https://raw.githubusercontent.com/gaoyifan/china-operator-ip/ip-lists/china6.txt) ([repository](https://github.com/gaoyifan/china-operator-ip))
+- [misakaio/chnroutes2 IPv4](https://raw.githubusercontent.com/misakaio/chnroutes2/master/chnroutes.txt) ([repository](https://github.com/misakaio/chnroutes2))
 
 #### IP database oriented
 

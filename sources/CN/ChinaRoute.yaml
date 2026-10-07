@@ -15,6 +15,10 @@ sources:
   - type: cidr
     value: https://raw.githubusercontent.com/gaoyifan/china-operator-ip/ip-lists/china6.txt
 
+  # BGP feed aggregate
+  - type: cidr
+    value: https://raw.githubusercontent.com/misakaio/chnroutes2/master/chnroutes.txt
+
   # IP database oriented
   - type: cidr
     value: https://ispip.clang.cn/all_cn_ipv46.txt
