@@ -195,6 +195,17 @@ func collectPrefixes(node *prefixNode, address []byte, depth int, ipv4 bool, pre
 }
 
 func writeIPCIDRs(ipPrefixes fetcher.IPPrefixes, path, name string) error {
+	for _, prefix := range ipPrefixes.IPv4 {
+		if prefix.Bits() == 0 {
+			return fmt.Errorf("refusing to write IPv4 default route %s to %q", prefix, filepath.Join(path, name))
+		}
+	}
+	for _, prefix := range ipPrefixes.IPv6 {
+		if prefix.Bits() == 0 {
+			return fmt.Errorf("refusing to write IPv6 default route %s to %q", prefix, filepath.Join(path, name))
+		}
+	}
+
 	if len(ipPrefixes.IPv4) == 0 && len(ipPrefixes.IPv6) == 0 {
 		log.Printf("no IP prefixes found for %q; skipping output", filepath.Join(path, name))
 		return nil
