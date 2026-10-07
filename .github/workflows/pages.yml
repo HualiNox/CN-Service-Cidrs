@@ -42,9 +42,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          content_hash="$(find output/tables -type f -name '*.txt' -print0 | sort -z | xargs -0 sha256sum | sha256sum | cut -d ' ' -f 1)"
-          jq --arg content_hash "$content_hash" '. + {content_hash: $content_hash}' _site/metadata.json > "$RUNNER_TEMP/metadata.json"
-          mv "$RUNNER_TEMP/metadata.json" _site/metadata.json
+          content_hash="$(jq -er '.content_hash' _site/metadata.json)"
 
           latest_tag="$(gh release list --limit 1 --json tagName --jq '.[0].tagName // ""')"
           previous_hash=""

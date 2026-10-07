@@ -1,6 +1,8 @@
 package generator
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -16,6 +18,7 @@ import (
 
 type pageData struct {
 	GeneratedAt string         `json:"generated_at"`
+	ContentHash string         `json:"content_hash"`
 	IPv4Count   int            `json:"ipv4_count"`
 	IPv6Count   int            `json:"ipv6_count"`
 	AllURL      string         `json:"all_url"`
@@ -292,8 +295,14 @@ func copyTables(source, destination string) error {
 }
 
 func newPageData(tables string, sourceFiles []parser.SourceFile, sources []SourceStatus) (pageData, error) {
+	contentHash, err := hashTables(tables)
+	if err != nil {
+		return pageData{}, err
+	}
+
 	page := pageData{
 		GeneratedAt: time.Now().UTC().Format(time.RFC3339),
+		ContentHash: contentHash,
 		Sources:     sources,
 		Groups:      make([]pageTable, 0, len(sourceFiles)),
 	}
@@ -340,6 +349,49 @@ func newPageData(tables string, sourceFiles []parser.SourceFile, sources []Sourc
 	page.IPv4URL = china.IPv4URL
 	page.IPv6URL = china.IPv6URL
 	return page, nil
+}
+
+func hashTables(tables string) (string, error) {
+	type tableHash struct {
+		path   string
+		digest string
+	}
+
+	var files []tableHash
+	err := filepath.WalkDir(tables, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return fmt.Errorf("walk table path %q: %w", path, err)
+		}
+		if entry.IsDir() || filepath.Ext(path) != ".txt" {
+			return nil
+		}
+
+		relative, err := filepath.Rel(tables, path)
+		if err != nil {
+			return fmt.Errorf("get relative table path for %q: %w", path, err)
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return fmt.Errorf("read table %q for content hash: %w", path, err)
+		}
+		digest := sha256.Sum256(data)
+		files = append(files, tableHash{
+			// Keep the virtual path stable to match hashes in existing releases.
+			path:   filepath.ToSlash(filepath.Join("output", "tables", relative)),
+			digest: hex.EncodeToString(digest[:]),
+		})
+		return nil
+	})
+	if err != nil {
+		return "", err
+	}
+
+	sort.Slice(files, func(i, j int) bool { return files[i].path < files[j].path })
+	hash := sha256.New()
+	for _, file := range files {
+		_, _ = fmt.Fprintf(hash, "%s  %s\n", file.digest, file.path)
+	}
+	return hex.EncodeToString(hash.Sum(nil)), nil
 }
 
 func readPageTable(tables, relative, name, directory string) (pageTable, bool, error) {
