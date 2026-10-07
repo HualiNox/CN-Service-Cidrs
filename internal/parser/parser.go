@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"bytes"
 	"fmt"
 	"io/fs"
 	"os"
@@ -18,7 +19,9 @@ func parseFile(sourcePath string) (SourceGroup, error) {
 		return SourceGroup{}, fmt.Errorf("read source file %q: %w", sourcePath, err)
 	}
 
-	if err := yaml.Unmarshal(data, &sourceGroup); err != nil {
+	decoder := yaml.NewDecoder(bytes.NewReader(data))
+	decoder.KnownFields(true)
+	if err := decoder.Decode(&sourceGroup); err != nil {
 		return SourceGroup{}, fmt.Errorf("parse source file %q: %w", sourcePath, err)
 	}
 

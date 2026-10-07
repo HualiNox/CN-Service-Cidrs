@@ -14,7 +14,7 @@ type Source struct {
 
 type SourceGroup struct {
 	Name    string   `yaml:"name" validate:"required"`
-	Sources []Source `yaml:"sources" validate:"required"`
+	Sources []Source `yaml:"sources" validate:"required,min=1,dive"`
 }
 
 type SourceFile struct {
