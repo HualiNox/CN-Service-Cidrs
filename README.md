@@ -27,6 +27,10 @@ The [MIT License](LICENSE) applies only to the project code; it does not apply t
 
 ## Data sources
 
+### `country-csv`
+
+Country CSV sources contain `ip_range_start`, `ip_range_end`, and `country_code` columns. The header is optional; headerless files use that column order. The parser keeps the configured country code and converts each inclusive IP range into CIDR prefixes.
+
 ### `clash-list`
 
 #### [LM-Firefly/Rules](https://github.com/LM-Firefly/Rules)
