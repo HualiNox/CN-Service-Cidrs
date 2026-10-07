@@ -15,12 +15,12 @@ func parseCountryCSV(url string, content []byte, countryCode string) (*IPPrefixe
 	reader := csv.NewReader(bytes.NewReader(content))
 	reader.FieldsPerRecord = -1
 
-	header, err := reader.Read()
+	firstRecord, err := reader.Read()
 	if err != nil {
-		return nil, 0, fmt.Errorf("read country CSV header from %q: %w", url, err)
+		return nil, 0, fmt.Errorf("read first row from country CSV %q: %w", url, err)
 	}
-	columns := make(map[string]int, len(header))
-	for i, column := range header {
+	columns := make(map[string]int, len(firstRecord))
+	for i, column := range firstRecord {
 		column = strings.TrimSpace(strings.TrimPrefix(column, "\ufeff"))
 		columns[column] = i
 	}
@@ -28,22 +28,36 @@ func parseCountryCSV(url string, content []byte, countryCode string) (*IPPrefixe
 	startColumn, hasStart := columns["ip_range_start"]
 	endColumn, hasEnd := columns["ip_range_end"]
 	countryColumn, hasCountry := columns["country_code"]
-	if !hasStart || !hasEnd || !hasCountry {
-		return nil, 0, fmt.Errorf("country CSV %q must contain ip_range_start, ip_range_end, and country_code columns", url)
+	headerPresent := hasStart || hasEnd || hasCountry
+	if headerPresent && (!hasStart || !hasEnd || !hasCountry) {
+		return nil, 0, fmt.Errorf("country CSV %q has an incomplete header; expected ip_range_start, ip_range_end, and country_code columns", url)
+	}
+	if !headerPresent {
+		if len(firstRecord) < 3 {
+			return nil, 0, fmt.Errorf("country CSV %q has no header and its first row has %d columns, expected at least 3", url, len(firstRecord))
+		}
+		startColumn, endColumn, countryColumn = 0, 1, 2
 	}
 
 	var ipPrefixes IPPrefixes
 	rejectedCIDRCount := 0
-	rowNo := 1
+	rowNo := 0
+	firstRowPending := !headerPresent
 	for {
-		row, err := reader.Read()
-		if err == io.EOF {
-			break
+		var row []string
+		if firstRowPending {
+			row = firstRecord
+			firstRowPending = false
+		} else {
+			row, err = reader.Read()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				return nil, rejectedCIDRCount, fmt.Errorf("read country CSV %q row %d: %w", url, rowNo+1, err)
+			}
 		}
 		rowNo++
-		if err != nil {
-			return nil, rejectedCIDRCount, fmt.Errorf("read country CSV %q row %d: %w", url, rowNo, err)
-		}
 		maxColumn := max(startColumn, endColumn, countryColumn)
 		if len(row) <= maxColumn {
 			return nil, rejectedCIDRCount, fmt.Errorf("country CSV %q row %d has %d columns, expected at least %d", url, rowNo, len(row), maxColumn+1)
