@@ -3,3 +3,6 @@ name: BiliBili
 sources:
   - type: clash-list
     value: https://raw.githubusercontent.com/LM-Firefly/Rules/refs/heads/master/Domestic-Services/BiliBili.list
+
+  - type: domain
+    value: https://raw.githubusercontent.com/LM-Firefly/Rules/refs/heads/master/Domestic-Services/BiliBili.list

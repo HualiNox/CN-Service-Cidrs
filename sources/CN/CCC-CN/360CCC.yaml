@@ -3,3 +3,6 @@ name: 360CCC
 sources:
   - type: clash-list
     value: https://raw.githubusercontent.com/LM-Firefly/Rules/refs/heads/master/CCC-CN/360CCC.list
+
+  - type: domain
+    value: https://raw.githubusercontent.com/LM-Firefly/Rules/refs/heads/master/CCC-CN/360CCC.list

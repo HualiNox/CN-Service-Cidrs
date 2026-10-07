@@ -3,3 +3,6 @@ name: Netease
 sources:
   - type: clash-list
     value: https://raw.githubusercontent.com/LM-Firefly/Rules/refs/heads/master/Domestic-Services/Netease.list
+
+  - type: domain
+    value: https://raw.githubusercontent.com/LM-Firefly/Rules/refs/heads/master/Domestic-Services/Netease.list

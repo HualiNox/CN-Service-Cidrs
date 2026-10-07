@@ -24,11 +24,13 @@ func Build(output string, sourceFiles []parser.SourceFile) ([]SourceStatus, erro
 	}
 
 	directoryPrefixes := make(map[string]fetcher.IPPrefixes)
+	directoryDomains := make(map[string][]string)
 	sources := make([]SourceStatus, 0)
 	sourceIPv4 := make([][]netip.Prefix, 0)
 	sourceIPv6 := make([][]netip.Prefix, 0)
 	for _, sourceFile := range sourceFiles {
 		var ipPrefixes fetcher.IPPrefixes
+		var domainRules []string
 		for _, source := range sourceFile.Group.Sources {
 			result, err := fetcher.Fetch(source)
 			if err != nil {
@@ -48,6 +50,7 @@ func Build(output string, sourceFiles []parser.SourceFile) ([]SourceStatus, erro
 				SHA256:            result.SHA256,
 				IPv4Count:         len(ipv4),
 				IPv6Count:         len(ipv6),
+				DomainCount:       len(result.DomainRules),
 				RejectedCIDRCount: result.RejectedCIDRCount,
 			})
 			sourceIPv4 = append(sourceIPv4, ipv4)
@@ -55,6 +58,7 @@ func Build(output string, sourceFiles []parser.SourceFile) ([]SourceStatus, erro
 
 			ipPrefixes.IPv4 = append(ipPrefixes.IPv4, ipv4...)
 			ipPrefixes.IPv6 = append(ipPrefixes.IPv6, ipv6...)
+			domainRules = append(domainRules, result.DomainRules...)
 		}
 
 		ipPrefixes.IPv4 = minimize(ipPrefixes.IPv4)
@@ -73,16 +77,23 @@ func Build(output string, sourceFiles []parser.SourceFile) ([]SourceStatus, erro
 		); err != nil {
 			return nil, fmt.Errorf("write group %q: %w", sourceFile.Group.Name, err)
 		}
+		if err := writeDomainRules(domainRules, filepath.Join(tables, sourceFile.Directory), sourceFile.Group.Name); err != nil {
+			return nil, fmt.Errorf("write domain rules for group %q: %w", sourceFile.Group.Name, err)
+		}
 
 		for dir := sourceFile.Directory; dir != "."; dir = filepath.Dir(dir) {
 			prefixes := directoryPrefixes[dir]
 			prefixes.IPv4 = minimize(append(prefixes.IPv4, ipPrefixes.IPv4...))
 			prefixes.IPv6 = minimize(append(prefixes.IPv6, ipPrefixes.IPv6...))
 			directoryPrefixes[dir] = prefixes
+			directoryDomains[dir] = append(directoryDomains[dir], domainRules...)
 		}
 	}
 
 	if err := writeDirectorySummary(directoryPrefixes, tables); err != nil {
+		return nil, err
+	}
+	if err := writeDomainDirectorySummary(directoryDomains, tables); err != nil {
 		return nil, err
 	}
 

@@ -37,19 +37,22 @@ type SourceStatus struct {
 	SHA256                    string            `json:"sha256"`
 	IPv4Count                 int               `json:"ipv4_count"`
 	IPv6Count                 int               `json:"ipv6_count"`
+	DomainCount               int               `json:"domain_count"`
 	RejectedCIDRCount         int               `json:"rejected_cidr_count"`
 	ExclusiveIPv4AddressCount string            `json:"exclusive_ipv4_address_count"`
 	ExclusiveIPv6AddressCount string            `json:"exclusive_ipv6_address_count"`
 }
 
 type pageTable struct {
-	Name      string `json:"name"`
-	Directory string `json:"directory,omitempty"`
-	IPv4Count int    `json:"ipv4_count"`
-	IPv6Count int    `json:"ipv6_count"`
-	AllURL    string `json:"all_url"`
-	IPv4URL   string `json:"ipv4_url,omitempty"`
-	IPv6URL   string `json:"ipv6_url,omitempty"`
+	Name        string `json:"name"`
+	Directory   string `json:"directory,omitempty"`
+	IPv4Count   int    `json:"ipv4_count"`
+	IPv6Count   int    `json:"ipv6_count"`
+	DomainCount int    `json:"domain_count"`
+	AllURL      string `json:"all_url"`
+	IPv4URL     string `json:"ipv4_url,omitempty"`
+	IPv6URL     string `json:"ipv6_url,omitempty"`
+	DomainURL   string `json:"domain_url,omitempty"`
 }
 
 const indexTemplate = `<!doctype html>
@@ -176,6 +179,7 @@ const indexTemplate = `<!doctype html>
 					<th>Group</th>
 					<th>IPv4</th>
 					<th>IPv6</th>
+					<th>Domain rules</th>
 					<th>Downloads</th>
 				</tr>
 			</thead>
@@ -185,10 +189,12 @@ const indexTemplate = `<!doctype html>
 				<td>{{.Directory}}/{{.Name}}</td>
 				<td>{{.IPv4Count}}</td>
 				<td>{{.IPv6Count}}</td>
+				<td>{{.DomainCount}}</td>
 				<td>
-					<a href="{{.AllURL}}">All</a>
+					{{if .AllURL}}<a href="{{.AllURL}}">All</a>{{end}}
 					{{if .IPv4URL}}<a href="{{.IPv4URL}}">IPv4</a>{{end}}
 					{{if .IPv6URL}}<a href="{{.IPv6URL}}">IPv6</a>{{end}}
+					{{if .DomainURL}}<a href="{{.DomainURL}}">Domains</a>{{end}}
 				</td>
 			</tr>
 			{{end}}
@@ -205,6 +211,7 @@ const indexTemplate = `<!doctype html>
 					<th>Source</th>
 					<th>IPv4 prefixes</th>
 					<th>IPv6 prefixes</th>
+					<th>Domain rules</th>
 					<th>Rejected CIDRs</th>
 					<th>Exclusive IPv4 addresses</th>
 					<th>Exclusive IPv6 addresses</th>
@@ -219,6 +226,7 @@ const indexTemplate = `<!doctype html>
 				<td class="source-url"><a href="{{.URL}}" title="{{.URL}}" aria-label="Open source: {{.URL}}">{{sourceHost .URL}}</a></td>
 				<td>{{.IPv4Count}}</td>
 				<td>{{.IPv6Count}}</td>
+				<td>{{.DomainCount}}</td>
 				<td>{{.RejectedCIDRCount}}</td>
 				<td>{{.ExclusiveIPv4AddressCount}}</td>
 				<td>{{.ExclusiveIPv6AddressCount}}</td>
@@ -236,6 +244,7 @@ const indexTemplate = `<!doctype html>
 					<th>Directory</th>
 					<th>IPv4</th>
 					<th>IPv6</th>
+					<th>Domain rules</th>
 					<th>Downloads</th>
 				</tr>
 			</thead>
@@ -245,10 +254,12 @@ const indexTemplate = `<!doctype html>
 				<td>{{.Name}}</td>
 				<td>{{.IPv4Count}}</td>
 				<td>{{.IPv6Count}}</td>
+				<td>{{.DomainCount}}</td>
 				<td>
-					<a href="{{.AllURL}}">All</a>
+					{{if .AllURL}}<a href="{{.AllURL}}">All</a>{{end}}
 					{{if .IPv4URL}}<a href="{{.IPv4URL}}">IPv4</a>{{end}}
 					{{if .IPv6URL}}<a href="{{.IPv6URL}}">IPv6</a>{{end}}
+					{{if .DomainURL}}<a href="{{.DomainURL}}">Domains</a>{{end}}
 				</td>
 			</tr>
 			{{end}}
@@ -410,14 +421,20 @@ func hashTables(tables string) (string, error) {
 
 func readPageTable(tables, relative, name, directory string) (pageTable, bool, error) {
 	allPath := filepath.Join(tables, relative)
-	if _, err := os.Stat(allPath); err != nil {
-		if os.IsNotExist(err) {
-			return pageTable{}, false, nil
-		}
-		return pageTable{}, false, fmt.Errorf("inspect table %q: %w", allPath, err)
+	base := strings.TrimSuffix(relative, ".txt")
+	domainPath := filepath.Join(tables, base+"-domain.txt")
+	allExists, err := fileExists(allPath)
+	if err != nil {
+		return pageTable{}, false, err
+	}
+	domainExists, err := fileExists(domainPath)
+	if err != nil {
+		return pageTable{}, false, err
+	}
+	if !allExists && !domainExists {
+		return pageTable{}, false, nil
 	}
 
-	base := strings.TrimSuffix(relative, ".txt")
 	ipv4Count, err := countLines(filepath.Join(tables, base+"-ipv4.txt"))
 	if err != nil {
 		return pageTable{}, false, err
@@ -427,15 +444,35 @@ func readPageTable(tables, relative, name, directory string) (pageTable, bool, e
 		return pageTable{}, false, err
 	}
 
-	return pageTable{
-		Name:      name,
-		Directory: directory,
-		IPv4Count: ipv4Count,
-		IPv6Count: ipv6Count,
-		AllURL:    tableURL(relative),
-		IPv4URL:   optionalTableURL(base+"-ipv4.txt", ipv4Count),
-		IPv6URL:   optionalTableURL(base+"-ipv6.txt", ipv6Count),
-	}, true, nil
+	domainCount, err := countLines(domainPath)
+	if err != nil {
+		return pageTable{}, false, err
+	}
+	table := pageTable{
+		Name:        name,
+		Directory:   directory,
+		IPv4Count:   ipv4Count,
+		IPv6Count:   ipv6Count,
+		DomainCount: domainCount,
+		IPv4URL:     optionalTableURL(base+"-ipv4.txt", ipv4Count),
+		IPv6URL:     optionalTableURL(base+"-ipv6.txt", ipv6Count),
+		DomainURL:   optionalTableURL(base+"-domain.txt", domainCount),
+	}
+	if allExists {
+		table.AllURL = tableURL(relative)
+	}
+	return table, true, nil
+}
+
+func fileExists(path string) (bool, error) {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true, nil
+	}
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	return false, fmt.Errorf("inspect table %q: %w", path, err)
 }
 
 func countLines(path string) (int, error) {

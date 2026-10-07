@@ -22,12 +22,13 @@ var httpClient = http.Client{
 
 type Result struct {
 	IPPrefixes        IPPrefixes
+	DomainRules       []string
 	RejectedCIDRCount int
 	SHA256            string
 }
 
 func Fetch(source parser.Source) (*Result, error) {
-	if source.Type != parser.ClashList && source.Type != parser.SourceCIDR && source.Type != parser.CountryCSV {
+	if source.Type != parser.ClashList && source.Type != parser.SourceCIDR && source.Type != parser.CountryCSV && source.Type != parser.DomainList {
 		log.Printf("warning: unsupported source type %q; skipping", source.Type)
 		return &Result{}, nil
 	}
@@ -38,6 +39,7 @@ func Fetch(source parser.Source) (*Result, error) {
 	}
 
 	var prefixes *IPPrefixes
+	var domainRules []string
 	var rejectedCIDRCount int
 	switch source.Type {
 	case parser.ClashList:
@@ -46,6 +48,9 @@ func Fetch(source parser.Source) (*Result, error) {
 		prefixes, rejectedCIDRCount, err = parseSourceCIDR(source.Value, content)
 	case parser.CountryCSV:
 		prefixes, rejectedCIDRCount, err = parseCountryCSV(source.Value, content, source.CountryCode)
+	case parser.DomainList:
+		domainRules, err = parseDomainList(source.Value, content)
+		prefixes = &IPPrefixes{}
 	}
 	if err != nil {
 		return nil, err
@@ -54,6 +59,7 @@ func Fetch(source parser.Source) (*Result, error) {
 	hash := sha256.Sum256(content)
 	return &Result{
 		IPPrefixes:        *prefixes,
+		DomainRules:       domainRules,
 		RejectedCIDRCount: rejectedCIDRCount,
 		SHA256:            hex.EncodeToString(hash[:]),
 	}, nil

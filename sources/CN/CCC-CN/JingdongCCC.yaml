@@ -3,3 +3,6 @@ name: JingdongCCC
 sources:
   - type: clash-list
     value: https://raw.githubusercontent.com/LM-Firefly/Rules/refs/heads/master/CCC-CN/JingdongCCC.list
+
+  - type: domain
+    value: https://raw.githubusercontent.com/LM-Firefly/Rules/refs/heads/master/CCC-CN/JingdongCCC.list
