@@ -30,12 +30,13 @@ type pageData struct {
 }
 
 type SourceStatus struct {
-	Group     string            `json:"group"`
-	Type      parser.SourceType `json:"type"`
-	URL       string            `json:"url"`
-	SHA256    string            `json:"sha256"`
-	IPv4Count int               `json:"ipv4_count"`
-	IPv6Count int               `json:"ipv6_count"`
+	Group             string            `json:"group"`
+	Type              parser.SourceType `json:"type"`
+	URL               string            `json:"url"`
+	SHA256            string            `json:"sha256"`
+	IPv4Count         int               `json:"ipv4_count"`
+	IPv6Count         int               `json:"ipv6_count"`
+	RejectedCIDRCount int               `json:"rejected_cidr_count"`
 }
 
 type pageTable struct {
@@ -197,6 +198,7 @@ const indexTemplate = `<!doctype html>
 					<th>Source</th>
 					<th>IPv4 prefixes</th>
 					<th>IPv6 prefixes</th>
+					<th>Rejected CIDRs</th>
 					<th>SHA-256</th>
 				</tr>
 			</thead>
@@ -208,6 +210,7 @@ const indexTemplate = `<!doctype html>
 				<td class="source-url"><a href="{{.URL}}">{{.URL}}</a></td>
 				<td>{{.IPv4Count}}</td>
 				<td>{{.IPv6Count}}</td>
+				<td>{{.RejectedCIDRCount}}</td>
 				<td class="source-hash">{{.SHA256}}</td>
 			</tr>
 			{{end}}

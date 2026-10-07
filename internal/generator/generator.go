@@ -38,12 +38,13 @@ func Build(output string, sourceFiles []parser.SourceFile) ([]SourceStatus, erro
 				group = filepath.ToSlash(filepath.Join(sourceFile.Directory, group))
 			}
 			sources = append(sources, SourceStatus{
-				Group:     group,
-				Type:      source.Type,
-				URL:       source.Value,
-				SHA256:    result.SHA256,
-				IPv4Count: len(minimize(result.IPPrefixes.IPv4)),
-				IPv6Count: len(minimize(result.IPPrefixes.IPv6)),
+				Group:             group,
+				Type:              source.Type,
+				URL:               source.Value,
+				SHA256:            result.SHA256,
+				IPv4Count:         len(minimize(result.IPPrefixes.IPv4)),
+				IPv6Count:         len(minimize(result.IPPrefixes.IPv6)),
+				RejectedCIDRCount: result.RejectedCIDRCount,
 			})
 
 			ipPrefixes.IPv4 = append(ipPrefixes.IPv4, result.IPPrefixes.IPv4...)

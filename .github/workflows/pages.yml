@@ -46,18 +46,27 @@ jobs:
 
           latest_tag="$(gh release list --limit 1 --json tagName --jq '.[0].tagName // ""')"
           previous_hash=""
+          previous_rejected_counts="[]"
           if [ -n "$latest_tag" ]; then
             mkdir -p "$RUNNER_TEMP/previous-release"
             if gh release download "$latest_tag" --pattern metadata.json --dir "$RUNNER_TEMP/previous-release" >/dev/null 2>&1; then
               previous_hash="$(jq -r '.content_hash // ""' "$RUNNER_TEMP/previous-release/metadata.json")"
+              previous_metadata="$RUNNER_TEMP/previous-release/metadata.json"
+              if jq -e '[.sources[] | has("rejected_cidr_count")] | all' "$previous_metadata" >/dev/null; then
+                previous_rejected_counts="$(jq -c '[.sources[] | {group, url, rejected_cidr_count: (.rejected_cidr_count // 0)}] | sort_by(.group, .url)' "$previous_metadata")"
+              else
+                previous_rejected_counts="legacy"
+              fi
             fi
           fi
+
+          current_rejected_counts="$(jq -c '[.sources[] | {group, url, rejected_cidr_count: (.rejected_cidr_count // 0)}] | sort_by(.group, .url)' _site/metadata.json)"
 
           python3 scripts/release_notes.py \
             "$RUNNER_TEMP/previous-release/metadata.json" \
             _site/metadata.json > "$RUNNER_TEMP/release-notes.md"
 
-          if [ "$content_hash" = "$previous_hash" ]; then
+          if [ "$content_hash" = "$previous_hash" ] && [ "$current_rejected_counts" = "$previous_rejected_counts" ]; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
             echo "Generated CIDR files are unchanged."
           else

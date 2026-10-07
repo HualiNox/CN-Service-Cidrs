@@ -17,7 +17,7 @@ Browse the [complete collection of generated lists](https://rules.mewrix.com/).
 
 `CN.txt` is the address-set union of every configured source group. Duplicate and overlapping ranges are removed, and adjacent CIDRs are combined whenever they exactly cover a parent prefix. The resulting list preserves the covered addresses but not the source or service category for each address. Use the individual source-group lists when that distinction matters.
 
-The generated `metadata.json` records each configured source's group, type, URL, SHA-256 of the fetched response body, and IPv4/IPv6 prefix counts after that source's prefixes are minimized. Per-source counts are diagnostic and are not additive because sources can overlap. Its `content_hash` is a deterministic hash of the generated `.txt` tables and is computed during the Go build.
+The generated `metadata.json` records each configured source's group, type, URL, SHA-256 of the fetched response body, IPv4/IPv6 prefix counts after minimization, and the number of rejected CIDR entries. Rejected entries are invalid or non-canonical CIDRs skipped by the plain CIDR-list parser; malformed CIDRs in Clash rules remain build errors. Per-source prefix counts are diagnostic and are not additive because sources can overlap. Its `content_hash` is a deterministic hash of the generated `.txt` tables and is computed during the Go build.
 
 Release notes compare aggregate prefix counts and report source additions, removals, and content or count changes.
 

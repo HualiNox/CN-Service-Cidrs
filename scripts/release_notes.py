@@ -48,7 +48,13 @@ def source_rows(previous_sources, current_sources):
             status = "Removed"
         elif any(
             old.get(field) != new.get(field)
-            for field in ("type", "sha256", "ipv4_count", "ipv6_count")
+            for field in (
+                "type",
+                "sha256",
+                "ipv4_count",
+                "ipv6_count",
+                "rejected_cidr_count",
+            )
         ):
             status = "Changed"
         else:
@@ -58,8 +64,11 @@ def source_rows(previous_sources, current_sources):
         new_v4 = new.get("ipv4_count") if new else 0
         old_v6 = old.get("ipv6_count") if old else None
         new_v6 = new.get("ipv6_count") if new else 0
+        old_rejected = old.get("rejected_cidr_count") if old else None
+        new_rejected = new.get("rejected_cidr_count", 0) if new else 0
         v4_before, v4_after, v4_delta = prefix_delta(old_v4, new_v4)
         v6_before, v6_after, v6_delta = prefix_delta(old_v6, new_v6)
+        rejected_before, rejected_after, rejected_delta = prefix_delta(old_rejected, new_rejected)
 
         old_hash = (old or {}).get("sha256", "")
         new_hash = (new or {}).get("sha256", "")
@@ -70,7 +79,8 @@ def source_rows(previous_sources, current_sources):
         source = new or old
         rows.append(
             "| {source} | {status} | {v4_before} → {v4_after} ({v4_delta}) "
-            "| {v6_before} → {v6_after} ({v6_delta}) | {hash_change} |".format(
+            "| {v6_before} → {v6_after} ({v6_delta}) "
+            "| {rejected_before} → {rejected_after} ({rejected_delta}) | {hash_change} |".format(
                 source=source_label(source),
                 status=status,
                 v4_before=v4_before,
@@ -79,6 +89,9 @@ def source_rows(previous_sources, current_sources):
                 v6_before=v6_before,
                 v6_after=v6_after,
                 v6_delta=v6_delta,
+                rejected_before=rejected_before,
+                rejected_after=rejected_after,
+                rejected_delta=rejected_delta,
                 hash_change=hash_change,
             )
         )
@@ -109,11 +122,12 @@ def main():
     print("\n### Source changes\n")
     if old_sources is None:
         print("No per-source records are available in the previous release; current source status is the baseline.\n")
-        print("| Source | Type | IPv4 | IPv6 | SHA-256 |\n| --- | --- | ---: | ---: | --- |")
+        print("| Source | Type | IPv4 | IPv6 | Rejected CIDRs | SHA-256 |\n| --- | --- | ---: | ---: | ---: | --- |")
         for source in new_sources:
             print(
                 f"| {source_label(source)} | {source.get('type', '')} | "
                 f"{source.get('ipv4_count', 0):,} | {source.get('ipv6_count', 0):,} | "
+                f"{source.get('rejected_cidr_count', 0):,} | "
                 f"{source.get('sha256', '')[:12]} |"
             )
         return
@@ -122,7 +136,7 @@ def main():
     if not rows:
         print("No configured source records changed.\n")
         return
-    print("| Source | Status | IPv4 prefixes | IPv6 prefixes | SHA-256 |\n| --- | --- | ---: | ---: | --- |")
+    print("| Source | Status | IPv4 prefixes | IPv6 prefixes | Rejected CIDRs | SHA-256 |\n| --- | --- | ---: | ---: | ---: | --- |")
     print("\n".join(rows))
 
 

@@ -21,8 +21,9 @@ var httpClient = http.Client{
 }
 
 type Result struct {
-	IPPrefixes IPPrefixes
-	SHA256     string
+	IPPrefixes        IPPrefixes
+	RejectedCIDRCount int
+	SHA256            string
 }
 
 func Fetch(source parser.Source) (*Result, error) {
@@ -37,18 +38,23 @@ func Fetch(source parser.Source) (*Result, error) {
 	}
 
 	var prefixes *IPPrefixes
+	var rejectedCIDRCount int
 	switch source.Type {
 	case parser.ClashList:
-		prefixes, err = parseClashList(source.Value, content)
+		prefixes, rejectedCIDRCount, err = parseClashList(source.Value, content)
 	case parser.SourceCIDR:
-		prefixes, err = parseSourceCIDR(source.Value, content)
+		prefixes, rejectedCIDRCount, err = parseSourceCIDR(source.Value, content)
 	}
 	if err != nil {
 		return nil, err
 	}
 
 	hash := sha256.Sum256(content)
-	return &Result{IPPrefixes: *prefixes, SHA256: hex.EncodeToString(hash[:])}, nil
+	return &Result{
+		IPPrefixes:        *prefixes,
+		RejectedCIDRCount: rejectedCIDRCount,
+		SHA256:            hex.EncodeToString(hash[:]),
+	}, nil
 }
 
 func fetchSource(url string) ([]byte, error) {
@@ -108,8 +114,9 @@ func retryableStatus(statusCode int) bool {
 		statusCode >= http.StatusInternalServerError
 }
 
-func parseClashList(url string, content []byte) (*IPPrefixes, error) {
+func parseClashList(url string, content []byte) (*IPPrefixes, int, error) {
 	var ipPrefixes IPPrefixes
+	rejectedCIDRCount := 0
 	scanner := bufio.NewScanner(bytes.NewReader(content))
 	lineNo := 0
 	for scanner.Scan() {
@@ -130,11 +137,12 @@ func parseClashList(url string, content []byte) (*IPPrefixes, error) {
 		case "IP-CIDR", "IP-CIDR6":
 			prefix, err := netip.ParsePrefix(value)
 			if err != nil {
-				return nil, fmt.Errorf("source %q line %d: invalid CIDR %q: %w", url, lineNo, value, err)
+				return nil, rejectedCIDRCount, fmt.Errorf("source %q line %d: invalid CIDR %q: %w", url, lineNo, value, err)
 			}
 
 			masked := prefix.Masked()
 			if prefix != masked {
+				rejectedCIDRCount++
 				log.Printf(
 					"%s:%d: non-canonical CIDR %s, expected %s",
 					url,
@@ -148,7 +156,7 @@ func parseClashList(url string, content []byte) (*IPPrefixes, error) {
 			switch ruleType {
 			case "IP-CIDR":
 				if !masked.Addr().Is4() {
-					return nil, fmt.Errorf(
+					return nil, rejectedCIDRCount, fmt.Errorf(
 						"source %q line %d: IP-CIDR contains IPv6 prefix %s",
 						url,
 						lineNo,
@@ -159,7 +167,7 @@ func parseClashList(url string, content []byte) (*IPPrefixes, error) {
 
 			case "IP-CIDR6":
 				if !masked.Addr().Is6() {
-					return nil, fmt.Errorf(
+					return nil, rejectedCIDRCount, fmt.Errorf(
 						"source %q line %d: IP-CIDR6 contains IPv4 prefix %s",
 						url,
 						lineNo,
@@ -171,14 +179,15 @@ func parseClashList(url string, content []byte) (*IPPrefixes, error) {
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("scan source %q after line %d: %w", url, lineNo, err)
+		return nil, rejectedCIDRCount, fmt.Errorf("scan source %q after line %d: %w", url, lineNo, err)
 	}
 
-	return &ipPrefixes, nil
+	return &ipPrefixes, rejectedCIDRCount, nil
 }
 
-func parseSourceCIDR(url string, content []byte) (*IPPrefixes, error) {
+func parseSourceCIDR(url string, content []byte) (*IPPrefixes, int, error) {
 	var ipPrefixes IPPrefixes
+	rejectedCIDRCount := 0
 	scanner := bufio.NewScanner(bytes.NewReader(content))
 	lineNo := 0
 	for scanner.Scan() {
@@ -190,12 +199,14 @@ func parseSourceCIDR(url string, content []byte) (*IPPrefixes, error) {
 
 		prefix, err := netip.ParsePrefix(line)
 		if err != nil {
+			rejectedCIDRCount++
 			log.Printf("%s:%d: warning: invalid CIDR %q; skipping: %v", url, lineNo, line, err)
 			continue
 		}
 
 		masked := prefix.Masked()
 		if masked != prefix {
+			rejectedCIDRCount++
 			log.Printf(
 				"%s:%d: non-canonical CIDR %s, expected %s",
 				url,
@@ -215,8 +226,8 @@ func parseSourceCIDR(url string, content []byte) (*IPPrefixes, error) {
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("scan source %q after line %d: %w", url, lineNo, err)
+		return nil, rejectedCIDRCount, fmt.Errorf("scan source %q after line %d: %w", url, lineNo, err)
 	}
 
-	return &ipPrefixes, nil
+	return &ipPrefixes, rejectedCIDRCount, nil
 }
