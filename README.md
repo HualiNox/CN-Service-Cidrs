@@ -12,11 +12,28 @@ Non-canonical CIDRs are rejected rather than automatically masked, to avoid sile
 | Combined CN IPv4 prefixes | [CN-ipv4.txt](https://rules.mewrix.com/tables/CN-ipv4.txt) |
 | Combined CN IPv6 prefixes | [CN-ipv6.txt](https://rules.mewrix.com/tables/CN-ipv6.txt) |
 | Combined CN domain rules | [CN-domain.txt](https://rules.mewrix.com/tables/CN-domain.txt) |
+| Combined CN domain rules (Mihomo classical) | [CN-domain-classical.txt](https://rules.mewrix.com/tables/CN-domain-classical.txt) |
 | AdGuard Home domain upstreams | [aghome-upstream.txt](https://rules.mewrix.com/tables/aghome-upstream.txt) |
 | Technitium Advanced Forwarding domain upstreams | [technitium-upstream.txt](https://rules.mewrix.com/tables/technitium-upstream.txt) |
 | China routing / GeoIP-oriented aggregate | [ChinaRoute.txt](https://rules.mewrix.com/tables/CN/ChinaRoute.txt) |
 
 Browse the [complete collection of generated lists](https://rules.mewrix.com/).
+
+`CN-domain-classical.txt` contains the same deduplicated domain rules as `CN-domain.txt`, written as `DOMAIN-SUFFIX`, `DOMAIN`, `DOMAIN-KEYWORD`, and `DOMAIN-REGEX` rules, one per line without a policy column. It is included in Pages downloads and the release's `rules.zip`. Use it with Mihomo's [`classical` text rule-provider format](https://wiki.metacubex.one/config/rule-providers/content/):
+
+```yaml
+rule-providers:
+  cn-domain:
+    type: http
+    behavior: classical
+    format: text
+    url: https://rules.mewrix.com/tables/CN-domain-classical.txt
+    path: ./rules/cn-domain-classical.txt
+    interval: 86400
+
+rules:
+  - RULE-SET,cn-domain,DIRECT
+```
 
 `CN.txt` is the address-set union of every configured source group. Duplicate and overlapping ranges are removed, and adjacent CIDRs are combined whenever they exactly cover a parent prefix. The resulting list preserves the covered addresses but not the source or service category for each address. Use the individual source-group lists when that distinction matters.
 

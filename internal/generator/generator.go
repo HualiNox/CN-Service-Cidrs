@@ -96,6 +96,9 @@ func Build(output string, sourceFiles []parser.SourceFile) ([]SourceStatus, erro
 	if err := writeDomainDirectorySummary(directoryDomains, tables); err != nil {
 		return nil, err
 	}
+	if err := writeDomainClassical(directoryDomains["CN"], filepath.Join(tables, "CN-domain-classical.txt")); err != nil {
+		return nil, err
+	}
 	if err := writeAGHomeUpstream(
 		directoryDomains["CN"],
 		filepath.Join(tables, "aghome-upstream.txt"),

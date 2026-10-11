@@ -18,22 +18,23 @@ import (
 )
 
 type pageData struct {
-	GeneratedAt     string         `json:"generated_at"`
-	ContentHash     string         `json:"content_hash"`
-	IPv4Count       int            `json:"ipv4_count"`
-	IPv6Count       int            `json:"ipv6_count"`
-	DomainCount     int            `json:"domain_count"`
-	AGHomeCount     int            `json:"aghome_upstream_count"`
-	TechnitiumCount int            `json:"technitium_upstream_count"`
-	AllURL          string         `json:"all_url"`
-	IPv4URL         string         `json:"ipv4_url"`
-	IPv6URL         string         `json:"ipv6_url"`
-	DomainURL       string         `json:"domain_url"`
-	AGHomeURL       string         `json:"aghome_upstream_url"`
-	TechnitiumURL   string         `json:"technitium_upstream_url"`
-	Sources         []SourceStatus `json:"sources"`
-	Groups          []pageTable    `json:"groups"`
-	Directories     []pageTable    `json:"directories"`
+	GeneratedAt        string         `json:"generated_at"`
+	ContentHash        string         `json:"content_hash"`
+	IPv4Count          int            `json:"ipv4_count"`
+	IPv6Count          int            `json:"ipv6_count"`
+	DomainCount        int            `json:"domain_count"`
+	AGHomeCount        int            `json:"aghome_upstream_count"`
+	TechnitiumCount    int            `json:"technitium_upstream_count"`
+	AllURL             string         `json:"all_url"`
+	IPv4URL            string         `json:"ipv4_url"`
+	IPv6URL            string         `json:"ipv6_url"`
+	DomainURL          string         `json:"domain_url"`
+	DomainClassicalURL string         `json:"domain_classical_url"`
+	AGHomeURL          string         `json:"aghome_upstream_url"`
+	TechnitiumURL      string         `json:"technitium_upstream_url"`
+	Sources            []SourceStatus `json:"sources"`
+	Groups             []pageTable    `json:"groups"`
+	Directories        []pageTable    `json:"directories"`
 }
 
 type SourceStatus struct {
@@ -189,6 +190,7 @@ const indexTemplate = `<!doctype html>
 			<a href="{{.IPv4URL}}">IPv4</a>
 			<a href="{{.IPv6URL}}">IPv6</a>
 			{{if .DomainURL}}<a href="{{.DomainURL}}">Domain rules</a>{{end}}
+			{{if .DomainClassicalURL}}<a href="{{.DomainClassicalURL}}">Classical domain rules</a>{{end}}
 			{{if .AGHomeURL}}<a href="{{.AGHomeURL}}">AdGuard Home upstreams</a>{{end}}
 			{{if .TechnitiumURL}}<a href="{{.TechnitiumURL}}">Technitium upstreams</a>{{end}}
 		</p>
@@ -396,6 +398,11 @@ func newPageData(tables string, sourceFiles []parser.SourceFile, sources []Sourc
 	page.IPv4URL = china.IPv4URL
 	page.IPv6URL = china.IPv6URL
 	page.DomainURL = china.DomainURL
+	classicalCount, err := countLines(filepath.Join(tables, "CN-domain-classical.txt"))
+	if err != nil {
+		return pageData{}, err
+	}
+	page.DomainClassicalURL = optionalTableURL("CN-domain-classical.txt", classicalCount)
 	agHomePath := "aghome-upstream.txt"
 	page.AGHomeCount, err = countLines(filepath.Join(tables, agHomePath))
 	if err != nil {

@@ -63,6 +63,35 @@ func countDomainRuleTypes(rules []string) map[string]int {
 	return counts
 }
 
+func writeDomainClassical(rules []string, outputPath string) error {
+	rules = minimizeDomainRules(rules)
+	if len(rules) == 0 {
+		return nil
+	}
+	var content strings.Builder
+	for _, rule := range rules {
+		kind, value, _ := strings.Cut(rule, ":")
+		var ruleType string
+		switch kind {
+		case "domain":
+			ruleType = "DOMAIN-SUFFIX"
+		case "full":
+			ruleType = "DOMAIN"
+		case "keyword":
+			ruleType = "DOMAIN-KEYWORD"
+		case "regexp":
+			ruleType = "DOMAIN-REGEX"
+		default:
+			return fmt.Errorf("unsupported domain rule %q for classical output", rule)
+		}
+		fmt.Fprintf(&content, "%s,%s\n", ruleType, value)
+	}
+	if err := os.WriteFile(outputPath, []byte(content.String()), 0o644); err != nil {
+		return fmt.Errorf("write classical domain output %q: %w", outputPath, err)
+	}
+	return nil
+}
+
 func minimizeDomainRules(rules []string) []string {
 	domainValues := make(map[string]struct{})
 	for _, rule := range rules {
